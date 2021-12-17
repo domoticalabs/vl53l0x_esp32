@@ -14,6 +14,8 @@
 
 #include "esp_log.h"
 
+#include "i2c_mux.h"
+
 #define VERSION_REQUIRED_MAJOR 1
 #define VERSION_REQUIRED_MINOR 0
 #define VERSION_REQUIRED_BUILD 2
@@ -117,10 +119,10 @@ VL53L0X_Error VL53L0X_Device_init(VL53L0X_Dev_t *device)
     VL53L0X_DeviceInfo_t DeviceInfo;
 
     pMyDevice->comms_type = 1;
-    pMyDevice->comms_speed_khz = 400;
+    pMyDevice->comms_speed_khz = I2C_MUX_BAUDRATE/1000;
     pMyDevice->I2cDevAddr = CONFIG_VL53L0X_I2C_ADDR;
 
-    Status = VL53L0X_comms_initialise(0, 400);
+    Status = VL53L0X_comms_initialise(0, I2C_MUX_BAUDRATE/1000);
     if (Status != VL53L0X_ERROR_NONE)
     {
         VL53L0X_ErrLog("i2c init failed!");
@@ -295,9 +297,18 @@ VL53L0X_Error VL53L0X_Device_getMeasurement(VL53L0X_Dev_t *device, uint16_t* dat
         return Status;
     }
 
-    *data = RangingMeasurementData.RangeMilliMeter;
+    /*ESP_LOGI("WTFPROX", "SignalRateRtnMegaCps: %u.%u", RangingMeasurementData.SignalRateRtnMegaCps >> 16, RangingMeasurementData.SignalRateRtnMegaCps << 16);
+
+    ESP_LOGI("WTFPROX", "RangeStatus: %02x", RangingMeasurementData.RangeStatus);*/
+
     // Clear the interrupt
     VL53L0X_ClearInterruptMask(device, VL53L0X_REG_SYSTEM_INTERRUPT_GPIO_NEW_SAMPLE_READY);
 
-    return Status;
+    if (RangingMeasurementData.RangeStatus == 0 && RangingMeasurementData.SignalRateRtnMegaCps >> 16 >= 2)
+    {
+        *data = RangingMeasurementData.RangeMilliMeter;
+        return Status;
+    }
+
+    return VL53L0X_ERROR_UNDEFINED;
 }
