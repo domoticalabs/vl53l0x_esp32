@@ -43,5 +43,5 @@ void vl53l0x_task(void* p)
 void app_main()
 {
     ESP_ERROR_CHECK(nvs_flash_init());
-    xTaskCreate(&vl53l0x_task, "test", 2049, NULL, 5, NULL);
+    xTaskCreate(&vl53l0x_task, "test", 2049, NULL, 2, NULL);
 }
