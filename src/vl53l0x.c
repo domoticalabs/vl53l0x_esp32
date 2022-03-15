@@ -297,14 +297,14 @@ VL53L0X_Error VL53L0X_Device_getMeasurement(VL53L0X_Dev_t *device, uint16_t* dat
         return Status;
     }
 
-    /*ESP_LOGI("WTFPROX", "SignalRateRtnMegaCps: %u.%u", RangingMeasurementData.SignalRateRtnMegaCps >> 16, RangingMeasurementData.SignalRateRtnMegaCps << 16);
+    printf("SignalRateRtnMegaCps: %u.%u\n", RangingMeasurementData.SignalRateRtnMegaCps >> 16, RangingMeasurementData.SignalRateRtnMegaCps << 16);
 
-    ESP_LOGI("WTFPROX", "RangeStatus: %02x", RangingMeasurementData.RangeStatus);*/
+    printf("RangeStatus: %02x\n", RangingMeasurementData.RangeStatus);
 
     // Clear the interrupt
     VL53L0X_ClearInterruptMask(device, VL53L0X_REG_SYSTEM_INTERRUPT_GPIO_NEW_SAMPLE_READY);
 
-    if (RangingMeasurementData.RangeStatus == 0 && RangingMeasurementData.SignalRateRtnMegaCps >> 16 >= 2)
+    if (RangingMeasurementData.RangeStatus == 0 && ((RangingMeasurementData.RangeMilliMeter < 50 && RangingMeasurementData.SignalRateRtnMegaCps >> 16 >= 3) || (RangingMeasurementData.RangeMilliMeter >= 50 && RangingMeasurementData.SignalRateRtnMegaCps >> 16 >= 2)))
     {
         *data = RangingMeasurementData.RangeMilliMeter;
         return Status;
