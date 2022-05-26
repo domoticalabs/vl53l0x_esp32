@@ -95,7 +95,6 @@ void trace_print_module_function(uint32_t module, uint32_t level, uint32_t funct
             fprintf(_tracefile, message);
         else
         {
-            //printf(message);
         }
     }
 }
