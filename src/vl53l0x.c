@@ -297,11 +297,11 @@ VL53L0X_Error VL53L0X_Device_getMeasurement(VL53L0X_Dev_t *device, uint16_t* dat
         return Status;
     }
 
-    printf("SignalRateRtnMegaCps: %u.%u\n", RangingMeasurementData.SignalRateRtnMegaCps >> 16, RangingMeasurementData.SignalRateRtnMegaCps << 16);
+/*    printf("SignalRateRtnMegaCps: %u.%u\n", RangingMeasurementData.SignalRateRtnMegaCps >> 16, RangingMeasurementData.SignalRateRtnMegaCps << 16);
 
     printf ("mm %d\n",RangingMeasurementData.RangeMilliMeter);
     printf("RangeStatus: %02x\n", RangingMeasurementData.RangeStatus);
-
+*/
     // Clear the interrupt
     VL53L0X_ClearInterruptMask(device, VL53L0X_REG_SYSTEM_INTERRUPT_GPIO_NEW_SAMPLE_READY);
 
