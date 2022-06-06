@@ -23,7 +23,6 @@ void vl53l0x_task(void* p)
     VL53L0X_Error err = VL53L0X_Device_init(&dev);
     if (err != VL53L0X_DEVICEERROR_NONE)
     {
-        ESP_LOGE(TAG, "device init error (%d)", err);
         vTaskDelete(NULL);
         return;
     }
@@ -33,7 +32,6 @@ void vl53l0x_task(void* p)
         uint16_t data = 0;
         if (VL53L0X_Device_getMeasurement(&dev, data) == VL53L0X_ERROR_NONE)
         {
-            ESP_LOGI(TAG, "measured data : %d mm", data);
         }
 
         vTaskDelay(pdMS_TO_TICKS(100));
