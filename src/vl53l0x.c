@@ -279,6 +279,16 @@ VL53L0X_Error VL53L0X_Device_deinit(VL53L0X_Dev_t *device)
     return Status;
 }
 
+#define RANGE_CHANGE 100
+void temp_print_debug(VL53L0X_RangingMeasurementData_t *RangingMeasurementData) {
+    static uint16_t mm_prev;
+    if (mm_prev - RangingMeasurementData->RangeMilliMeter > RANGE_CHANGE || RangingMeasurementData->RangeMilliMeter - mm_prev > RANGE_CHANGE) {
+        printf("SignalRateRtnMegaCps: %u.%u\n", RangingMeasurementData->SignalRateRtnMegaCps >> 16, RangingMeasurementData->SignalRateRtnMegaCps << 16);
+        printf ("mm %d\n",RangingMeasurementData->RangeMilliMeter);
+        mm_prev = RangingMeasurementData->RangeMilliMeter;
+    }
+}
+
 VL53L0X_Error VL53L0X_Device_getMeasurement(VL53L0X_Dev_t *device, uint16_t* data)
 {
     VL53L0X_Error Status;
@@ -297,14 +307,14 @@ VL53L0X_Error VL53L0X_Device_getMeasurement(VL53L0X_Dev_t *device, uint16_t* dat
         return Status;
     }
 
-/*    printf("SignalRateRtnMegaCps: %u.%u\n", RangingMeasurementData.SignalRateRtnMegaCps >> 16, RangingMeasurementData.SignalRateRtnMegaCps << 16);
 
-    printf ("mm %d\n",RangingMeasurementData.RangeMilliMeter);
-*/
+    //temp_print_debug(&RangingMeasurementData);
+
     // Clear the interrupt
     VL53L0X_ClearInterruptMask(device, VL53L0X_REG_SYSTEM_INTERRUPT_GPIO_NEW_SAMPLE_READY);
 
-    if (RangingMeasurementData.RangeStatus == 0 && ((RangingMeasurementData.RangeMilliMeter < 50 && RangingMeasurementData.SignalRateRtnMegaCps >> 16 >= 3) || (RangingMeasurementData.RangeMilliMeter >= 50 && RangingMeasurementData.SignalRateRtnMegaCps >> 16 >= 2)))
+    //if (RangingMeasurementData.RangeStatus == 0 && ((RangingMeasurementData.RangeMilliMeter < 50 && RangingMeasurementData.SignalRateRtnMegaCps >> 16 >= 3) || (RangingMeasurementData.RangeMilliMeter >= 50 && RangingMeasurementData.SignalRateRtnMegaCps >> 16 >= 2)))
+    if (RangingMeasurementData.RangeStatus == 0 && RangingMeasurementData.RangeMilliMeter < 1500 && RangingMeasurementData.SignalRateRtnMegaCps >> 16 >= 0 && RangingMeasurementData.SignalRateRtnMegaCps << 16 >= 25)
     {
         *data = RangingMeasurementData.RangeMilliMeter;
         return Status;
