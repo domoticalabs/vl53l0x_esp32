@@ -16,6 +16,8 @@
 
 #include "i2c_mux.h"
 
+#include "struct.h"
+
 #define VERSION_REQUIRED_MAJOR 1
 #define VERSION_REQUIRED_MINOR 0
 #define VERSION_REQUIRED_BUILD 2
@@ -40,6 +42,8 @@ static const char* TAG = "vl53l0x";
     #define VL53L0X_Log(level, fmt, ...) (void)0
     #define VL53L0X_ErrLog(fmt, ...) (void)0
 #endif
+
+extern StructDeviceSettings dev_settings;
 
 static void print_pal_error(VL53L0X_Error Status)
 {
@@ -117,6 +121,8 @@ VL53L0X_Error VL53L0X_Device_init(VL53L0X_Dev_t *device)
     VL53L0X_Version_t Version;
     VL53L0X_Version_t *pVersion = &Version;
     VL53L0X_DeviceInfo_t DeviceInfo;
+
+    esp_log_level_set(TAG, ESP_LOG_INFO);
 
     pMyDevice->comms_type = 1;
     pMyDevice->comms_speed_khz = I2C_MUX_BAUDRATE/1000;
@@ -279,19 +285,36 @@ VL53L0X_Error VL53L0X_Device_deinit(VL53L0X_Dev_t *device)
     return Status;
 }
 
-#define SENS_THRESHOLD 150<<16
+#define SENS_HIGH 22100000  // 105cm
+#define SENS_MED 50076467   // 80cm
+#define SENS_LOW 101901653  // 65cm
 inline bool filter(VL53L0X_RangingMeasurementData_t *RangingMeasurementData) {
     uint32_t sens;
+    //ESP_LOGI(TAG, "Status: %d, mm: %d, signal: %08x", RangingMeasurementData->RangeStatus, RangingMeasurementData->RangeMilliMeter, RangingMeasurementData->SignalRateRtnMegaCps);
     if (RangingMeasurementData->RangeStatus != 0)
         return false;
-    if (RangingMeasurementData->RangeMilliMeter > 1500)
+    /*if (RangingMeasurementData->RangeMilliMeter > 1500)
         return false;
     if (RangingMeasurementData->SignalRateRtnMegaCps >> 16 == 0) {
         sens = RangingMeasurementData->SignalRateRtnMegaCps & 0xFFFF;
         sens *= RangingMeasurementData->RangeMilliMeter;
         return (sens > SENS_THRESHOLD);
+    }*/
+    sens = RangingMeasurementData->SignalRateRtnMegaCps;
+    sens *= RangingMeasurementData->RangeMilliMeter;
+    switch (dev_settings.proximity_config.sensitivity)
+    {
+        default:
+        case PROXIMITY_CONFIGURATION__PROXIMITY_SENSITIVITY__PROXIMITY_OFF:
+            return false;
+        case PROXIMITY_CONFIGURATION__PROXIMITY_SENSITIVITY__PROXIMITY_LOW:
+            return (sens > SENS_LOW);
+        case PROXIMITY_CONFIGURATION__PROXIMITY_SENSITIVITY__PROXIMITY_MED:
+            return (sens > SENS_MED);
+        case PROXIMITY_CONFIGURATION__PROXIMITY_SENSITIVITY__PROXIMITY_HIGH:
+            return (sens > SENS_HIGH);
     }
-    return true;
+    return false;
 }
 
 VL53L0X_Error VL53L0X_Device_getMeasurement(VL53L0X_Dev_t *device, uint16_t* data)
