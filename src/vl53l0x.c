@@ -285,12 +285,12 @@ VL53L0X_Error VL53L0X_Device_deinit(VL53L0X_Dev_t *device)
     return Status;
 }
 
-#define SENS_HIGH 29523259  // 105cm
-#define SENS_MED 50076467   // 80cm
-#define SENS_LOW 150143744  // 50cm
+#define SENS_HIGH 14597859  // 105cm
+#define SENS_MED 34547370  // 80cm
+#define SENS_LOW 81357198  // 50cm
 inline bool filter(VL53L0X_RangingMeasurementData_t *RangingMeasurementData) {
     uint32_t sens;
-    //ESP_LOGI(TAG, "Status: %d, mm: %d, signal: %08x", RangingMeasurementData->RangeStatus, RangingMeasurementData->RangeMilliMeter, RangingMeasurementData->SignalRateRtnMegaCps);
+    ESP_LOGI(TAG, "Status: %d, mm: %d, signal: %08x", RangingMeasurementData->RangeStatus, RangingMeasurementData->RangeMilliMeter, RangingMeasurementData->SignalRateRtnMegaCps);
     if (RangingMeasurementData->RangeStatus != 0)
         return false;
     /*if (RangingMeasurementData->RangeMilliMeter > 1500)
@@ -302,8 +302,8 @@ inline bool filter(VL53L0X_RangingMeasurementData_t *RangingMeasurementData) {
     }*/
     sens = RangingMeasurementData->SignalRateRtnMegaCps;
     sens *= RangingMeasurementData->RangeMilliMeter;
-    switch (dev_settings.proximity_config.sensitivity)
-    {
+    dev_settings.proximity_config.sensitivity = PROXIMITY_CONFIGURATION__PROXIMITY_SENSITIVITY__PROXIMITY_HIGH;
+    switch (dev_settings.proximity_config.sensitivity) {
         default:
         case PROXIMITY_CONFIGURATION__PROXIMITY_SENSITIVITY__PROXIMITY_OFF:
             return false;
