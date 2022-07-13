@@ -302,7 +302,6 @@ inline bool filter(VL53L0X_RangingMeasurementData_t *RangingMeasurementData) {
     }*/
     sens = RangingMeasurementData->SignalRateRtnMegaCps;
     sens *= RangingMeasurementData->RangeMilliMeter;
-    dev_settings.proximity_config.sensitivity = PROXIMITY_CONFIGURATION__PROXIMITY_SENSITIVITY__PROXIMITY_HIGH;
     switch (dev_settings.proximity_config.sensitivity) {
         default:
         case PROXIMITY_CONFIGURATION__PROXIMITY_SENSITIVITY__PROXIMITY_OFF:
