@@ -316,6 +316,7 @@ inline bool filter(VL53L0X_RangingMeasurementData_t *RangingMeasurementData) {
     return false;
 }
 
+VL53L0X_RangingMeasurementData_t OverRangingMeasurementData;
 VL53L0X_Error VL53L0X_Device_getMeasurement(VL53L0X_Dev_t *device, uint16_t* data)
 {
     VL53L0X_Error Status;
@@ -336,13 +337,14 @@ VL53L0X_Error VL53L0X_Device_getMeasurement(VL53L0X_Dev_t *device, uint16_t* dat
 
     // Clear the interrupt
     VL53L0X_ClearInterruptMask(device, VL53L0X_REG_SYSTEM_INTERRUPT_GPIO_NEW_SAMPLE_READY);
+    OverRangingMeasurementData = RangingMeasurementData;
 
     //if (RangingMeasurementData.RangeStatus == 0 && ((RangingMeasurementData.RangeMilliMeter < 50 && RangingMeasurementData.SignalRateRtnMegaCps >> 16 >= 3) || (RangingMeasurementData.RangeMilliMeter >= 50 && RangingMeasurementData.SignalRateRtnMegaCps >> 16 >= 2)))
-    if (filter(&RangingMeasurementData))
-    {
+    /*if (filter(&RangingMeasurementData))
+    {*/
         *data = RangingMeasurementData.RangeMilliMeter;
         return Status;
-    }
+    //}
 
     return VL53L0X_ERROR_UNDEFINED;
 }
