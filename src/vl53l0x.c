@@ -286,8 +286,8 @@ VL53L0X_Error VL53L0X_Device_deinit(VL53L0X_Dev_t *device)
 }
 
 #define SENS_HIGH 14597859  // 105cm
-#define SENS_MED 34547370  // 80cm
-#define SENS_LOW 81357198  // 50cm
+#define SENS_MED 34547370   // 80cm
+#define SENS_LOW 81357198   // 50cm
 inline bool filter(VL53L0X_RangingMeasurementData_t *RangingMeasurementData) {
     uint32_t sens;
     //ESP_LOGI(TAG, "Status: %d, mm: %d, signal: %08x", RangingMeasurementData->RangeStatus, RangingMeasurementData->RangeMilliMeter, RangingMeasurementData->SignalRateRtnMegaCps);
