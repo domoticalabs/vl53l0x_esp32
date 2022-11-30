@@ -10,7 +10,7 @@
 #include "vl53l0x_i2c_platform.h"
 #include "vl53l0x_def.h"
 
-#include <stdio.h>    // sprintf(), vsnprintf(), printf()
+#include <stdio.h>    // sprintf(), vsnprintf(), //printf()
 
 #define trace_print(level, ...) trace_print_module_function(TRACE_MODULE_PLATFORM, level, TRACE_FUNCTION_NONE, ##__VA_ARGS__)
 #define trace_i2c(...) trace_print_module_function(TRACE_MODULE_NONE, TRACE_LEVEL_NONE, TRACE_FUNCTION_I2C, ##__VA_ARGS__)
@@ -39,7 +39,7 @@ void trace_print_module_function(uint32_t module, uint32_t level, uint32_t funct
         // vsnprintf(message, VL53L0X_MAX_STRING_LENGTH_PLT, format, arg_list);
         vprintf(format, arg_list);
         va_end(arg_list);
-        // printf(message);
+        // //printf(message);
     }
 }
 
