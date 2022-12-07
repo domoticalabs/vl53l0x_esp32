@@ -285,14 +285,17 @@ VL53L0X_Error VL53L0X_Device_deinit(VL53L0X_Dev_t *device)
     return Status;
 }
 
-#define SENS_HIGH   17500000    // 100cm
-#define SENS_MED    43500000    // 80cm
-#define SENS_LOW    116000000   // 50cm
+#define SENS_HIGH               17500000    // 100cm
+#define SENS_MED                43500000    // 80cm 
+#define SENS_LOW                116000000   // 50cm 
+#define SENS_HIGH_WIDTH HAND    42920000    // 100cm
+#define SENS_MED_WIDTH HAND     33550000    // 80cm 
+#define SENS_LOW_WITH HAND      9800000     // 50cm 
 inline bool filter(VL53L0X_RangingMeasurementData_t *RangingMeasurementData) {
     uint32_t sens;
     if (RangingMeasurementData->RangeStatus != 0)
         return false;
-    //ESP_LOGI("PROXY", "%d;%d", RangingMeasurementData->RangeMilliMeter, RangingMeasurementData->SignalRateRtnMegaCps);
+    ESP_LOGI("PROXY", "%d;%d", RangingMeasurementData->RangeMilliMeter, RangingMeasurementData->SignalRateRtnMegaCps);
     sens = RangingMeasurementData->SignalRateRtnMegaCps & 0xFFFF0000;
     sens *= RangingMeasurementData->RangeMilliMeter;
     switch (dev_settings.proximity_config.sensitivity) {
