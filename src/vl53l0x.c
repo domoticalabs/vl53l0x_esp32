@@ -44,6 +44,7 @@ static const char* TAG = "vl53l0x";
 #endif
 
 extern StructDeviceSettings dev_settings;
+VL53L0X_RangingMeasurementData_t structData;
 
 static void print_pal_error(VL53L0X_Error Status)
 {
@@ -309,6 +310,8 @@ inline bool filter(VL53L0X_RangingMeasurementData_t *RangingMeasurementData) {
     return false;
 }
 
+void SetVal(VL53L0X_RangingMeasurementData_t *data);
+
 VL53L0X_Error VL53L0X_Device_getMeasurement(VL53L0X_Dev_t *device, uint16_t* data)
 {
     VL53L0X_Error Status;
@@ -334,8 +337,21 @@ VL53L0X_Error VL53L0X_Device_getMeasurement(VL53L0X_Dev_t *device, uint16_t* dat
     /*if (filter(&RangingMeasurementData))
     {*/
         *data = RangingMeasurementData.RangeMilliMeter;
+        //RangingMeasurementData.RangeMilliMeter;
+        SetVal (&RangingMeasurementData);
         return Status;
     //}
 
     return VL53L0X_ERROR_UNDEFINED;
+}
+
+void SetVal(VL53L0X_RangingMeasurementData_t *data)
+{
+    structData.RangeMilliMeter = data->RangeMilliMeter;
+    structData.SignalRateRtnMegaCps = data->SignalRateRtnMegaCps;
+}
+
+VL53L0X_RangingMeasurementData_t GetVal(void)
+{
+    return structData;
 }
