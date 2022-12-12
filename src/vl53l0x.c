@@ -331,11 +331,11 @@ VL53L0X_Error VL53L0X_Device_getMeasurement(VL53L0X_Dev_t *device, uint16_t* dat
     VL53L0X_ClearInterruptMask(device, VL53L0X_REG_SYSTEM_INTERRUPT_GPIO_NEW_SAMPLE_READY);
 
     //if (RangingMeasurementData.RangeStatus == 0 && ((RangingMeasurementData.RangeMilliMeter < 50 && RangingMeasurementData.SignalRateRtnMegaCps >> 16 >= 3) || (RangingMeasurementData.RangeMilliMeter >= 50 && RangingMeasurementData.SignalRateRtnMegaCps >> 16 >= 2)))
-    if (filter(&RangingMeasurementData))
-    {
+    /*if (filter(&RangingMeasurementData))
+    {*/
         *data = RangingMeasurementData.RangeMilliMeter;
         return Status;
-    }
+    //}
 
     return VL53L0X_ERROR_UNDEFINED;
 }
