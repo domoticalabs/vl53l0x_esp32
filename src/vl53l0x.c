@@ -292,7 +292,7 @@ inline bool filter(VL53L0X_RangingMeasurementData_t *RangingMeasurementData) {
     uint32_t sens;
     if (RangingMeasurementData->RangeStatus != 0)
         return false;
-    //ESP_LOGI("PROXY", "%d;%d", RangingMeasurementData->RangeMilliMeter, RangingMeasurementData->SignalRateRtnMegaCps);
+    ESP_LOGI("PROXY", "%d;%d;%d;%d;%d;%d;%d", RangingMeasurementData->RangeMilliMeter, RangingMeasurementData->RangeDMaxMilliMeter, RangingMeasurementData->SignalRateRtnMegaCps, RangingMeasurementData->AmbientRateRtnMegaCps, RangingMeasurementData->EffectiveSpadRtnCount, RangingMeasurementData->ZoneId, RangingMeasurementData->RangeFractionalPart);
     sens = RangingMeasurementData->SignalRateRtnMegaCps & 0xFFFF0000;
     sens *= RangingMeasurementData->RangeMilliMeter;
     switch (dev_settings.proximity_config.sensitivity) {
