@@ -201,36 +201,21 @@ VL53L0X_Error VL53L0X_Device_init(VL53L0X_Dev_t *device)
         return Status;
     }
 
-    uint8_t VhvSettings;
-    uint8_t PhaseCal;
+    uint32_t refSpadCount = 6;
+    uint8_t isApertureSpads = 1;
+    Status = VL53L0X_SetReferenceSpads(pMyDevice, refSpadCount, isApertureSpads);
 
-    VL53L0X_Log(ESP_LOG_DEBUG, "Call of VL53L0X_PerformRefCalibration\n");
-    Status = VL53L0X_PerformRefCalibration(pMyDevice,
-                                            &VhvSettings, &PhaseCal); // Device Initialization
-    if (Status != VL53L0X_ERROR_NONE)
-    {
-        print_pal_error(Status);
-        return Status;
-    }
+    uint8_t VhvSettings = 23;
+    uint8_t PhaseCal = 1;
+    Status = VL53L0X_SetRefCalibration(pMyDevice, VhvSettings, PhaseCal);
 
-    //================================
-    // TODO: RefCalibration Data Handling
-    //================================
+    int32_t pOffsetMicroMeter = -96000;
 
-    uint32_t refSpadCount;
-    uint8_t isApertureSpads;
-    VL53L0X_Log(ESP_LOG_DEBUG, "Call of VL53L0X_PerformRefSpadManagement\n");
-    Status = VL53L0X_PerformRefSpadManagement(pMyDevice,
-                                                &refSpadCount, &isApertureSpads); // Device Initialization
-    if (Status != VL53L0X_ERROR_NONE)
-    {
-        print_pal_error(Status);
-        return Status;
-    }
-
-    //================================
-    // TODO: RefSpadManagement Data Handling
-    //================================
+    VL53L0X_SetOffsetCalibrationDataMicroMeter(pMyDevice, pOffsetMicroMeter);
+    
+	FixPoint1616_t pXTalkCompensationRateMegaCps = 0;
+    VL53L0X_SetXTalkCompensationRateMegaCps(pMyDevice, pXTalkCompensationRateMegaCps);
+    VL53L0X_SetXTalkCompensationEnable(pMyDevice, 1);
 
     VL53L0X_Log(ESP_LOG_DEBUG, "Call of VL53L0X_SetDeviceMode\n");
     VL53L0X_DeviceModes default_device_mode = VL53L0X_DEVICEMODE_CONTINUOUS_RANGING;
