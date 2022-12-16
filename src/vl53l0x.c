@@ -201,19 +201,19 @@ VL53L0X_Error VL53L0X_Device_init(VL53L0X_Dev_t *device)
         return Status;
     }
 
-    uint32_t refSpadCount = 6;
+    uint32_t refSpadCount = 8;
     uint8_t isApertureSpads = 1;
     Status = VL53L0X_SetReferenceSpads(pMyDevice, refSpadCount, isApertureSpads);
 
-    uint8_t VhvSettings = 23;
+    uint8_t VhvSettings = 27;
     uint8_t PhaseCal = 1;
     Status = VL53L0X_SetRefCalibration(pMyDevice, VhvSettings, PhaseCal);
 
-    int32_t pOffsetMicroMeter = 50000;
+    int32_t pOffsetMicroMeter = 15000;
 
     VL53L0X_SetOffsetCalibrationDataMicroMeter(pMyDevice, pOffsetMicroMeter);
 
-    FixPoint1616_t pXTalkCompensationRateMegaCps = 0x0000052e;
+    FixPoint1616_t pXTalkCompensationRateMegaCps = 0x00000030;
     VL53L0X_SetXTalkCompensationRateMegaCps(pMyDevice, pXTalkCompensationRateMegaCps);
     VL53L0X_SetXTalkCompensationEnable(pMyDevice, 1);
 
@@ -279,24 +279,29 @@ VL53L0X_Error VL53L0X_Device_deinit(VL53L0X_Dev_t *device)
 #define SENS_MED    43500000    // 80cm
 #define SENS_LOW    116000000   // 50cm
 inline bool filter(VL53L0X_RangingMeasurementData_t *RangingMeasurementData) {
-    uint32_t sens;
+    float sens;
     if (RangingMeasurementData->RangeStatus != 0)
         return false;
-    ESP_LOGI("PROXY", "%d;%d;%d;%d;%d;%d;%d", RangingMeasurementData->RangeMilliMeter, RangingMeasurementData->RangeDMaxMilliMeter, RangingMeasurementData->SignalRateRtnMegaCps, RangingMeasurementData->AmbientRateRtnMegaCps, RangingMeasurementData->EffectiveSpadRtnCount, RangingMeasurementData->ZoneId, RangingMeasurementData->RangeFractionalPart);
+    //ESP_LOGI("PROXY", "%d;%d;%d;%d;%d;%d;%d", RangingMeasurementData->RangeMilliMeter, RangingMeasurementData->RangeDMaxMilliMeter, RangingMeasurementData->SignalRateRtnMegaCps, RangingMeasurementData->AmbientRateRtnMegaCps, RangingMeasurementData->EffectiveSpadRtnCount, RangingMeasurementData->ZoneId, RangingMeasurementData->RangeFractionalPart);
     //ESP_LOGI("PROXY", "%d;%d", RangingMeasurementData->RangeMilliMeter, RangingMeasurementData->SignalRateRtnMegaCps);
-    sens = RangingMeasurementData->SignalRateRtnMegaCps & 0xFFFF0000;
-    sens *= RangingMeasurementData->RangeMilliMeter;
-    if (RangingMeasurementData->SignalRateRtnMegaCps > 25000) {
+    sens = ((float) RangingMeasurementData->SignalRateRtnMegaCps) / 65536.0;
+    sens *= (float) RangingMeasurementData->RangeMilliMeter;
+    ESP_LOGI("PROXY", "%d;%d;%.3f", RangingMeasurementData->RangeMilliMeter, RangingMeasurementData->SignalRateRtnMegaCps, sens);
+    if (RangingMeasurementData->SignalRateRtnMegaCps > 60000) {
+        // Hand low
+        if (RangingMeasurementData->RangeMilliMeter < 330 && sens > 445.0) {
+            return true;
+        }
         switch (dev_settings.proximity_config.sensitivity) {
             default:
             case PROXIMITY_CONFIGURATION__PROXIMITY_SENSITIVITY__PROXIMITY_OFF:
                 return false;
             case PROXIMITY_CONFIGURATION__PROXIMITY_SENSITIVITY__PROXIMITY_LOW:
-                return RangingMeasurementData->RangeMilliMeter < 480;
+                return sens > 1000.0;
             case PROXIMITY_CONFIGURATION__PROXIMITY_SENSITIVITY__PROXIMITY_MED:
-                return RangingMeasurementData->RangeMilliMeter < 480 || (RangingMeasurementData->SignalRateRtnMegaCps > 45000);
+                return sens > 630.0;
             case PROXIMITY_CONFIGURATION__PROXIMITY_SENSITIVITY__PROXIMITY_HIGH:
-                return RangingMeasurementData->RangeMilliMeter < 480 || (RangingMeasurementData->SignalRateRtnMegaCps > 28000);
+                return sens > 190.0;
         }
     }
     return false;
