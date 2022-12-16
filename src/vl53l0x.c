@@ -233,24 +233,24 @@ VL53L0X_Error VL53L0X_Device_init(VL53L0X_Dev_t *device)
     ESP_LOGI(TAG, "REF: %u, %u", VhvSettings, PhaseCal);
 
     ESP_LOGI(TAG, "Calibrating Offset...");
-    ESP_LOGI(TAG, "Please place a white target at 25cm...");
+    ESP_LOGI(TAG, "Please place a white target at 10cm...");
     vTaskDelay(pdMS_TO_TICKS(5000));
 
-    FixPoint1616_t CalDistanceMilliMeter = (25<<16) | 0;
+    FixPoint1616_t CalDistanceMilliMeter = (100<<16) | 0;
     int32_t pOffsetMicroMeter;
 
     VL53L0X_PerformOffsetCalibration(pMyDevice, CalDistanceMilliMeter, &pOffsetMicroMeter);
     ESP_LOGI(TAG, "OFFSET: %d", pOffsetMicroMeter);
 
     ESP_LOGI(TAG, "Calibrating xTalk...");
-    ESP_LOGI(TAG, "Please place a grey target at 25cm...");
+    ESP_LOGI(TAG, "Please place a grey target at 60cm...");
     vTaskDelay(pdMS_TO_TICKS(5000));
 
-    FixPoint1616_t XTalkCalDistance = (25 << 16) | 0;
+    FixPoint1616_t XTalkCalDistance = (600 << 16) | 0;
 	FixPoint1616_t pXTalkCompensationRateMegaCps;
 
     VL53L0X_PerformXTalkCalibration(pMyDevice, XTalkCalDistance, &pXTalkCompensationRateMegaCps);
-    ESP_LOGI(TAG, "XTALK: %d.%d", pXTalkCompensationRateMegaCps >> 16, pXTalkCompensationRateMegaCps & 0xFFFF);
+    ESP_LOGI(TAG, "XTALK: %08x", (unsigned int) pXTalkCompensationRateMegaCps);
 
     VL53L0X_Log(ESP_LOG_DEBUG, "Call of VL53L0X_SetDeviceMode\n");
     VL53L0X_DeviceModes default_device_mode = VL53L0X_DEVICEMODE_CONTINUOUS_RANGING;
@@ -261,6 +261,10 @@ VL53L0X_Error VL53L0X_Device_init(VL53L0X_Dev_t *device)
         return Status;
     }
 
+    // SET PROFILE
+    Status = VL53L0X_SetLimitCheckValue(pMyDevice, VL53L0X_CHECKENABLE_SIGNAL_RATE_FINAL_RANGE, (FixPoint1616_t)(0.25 * 65536));
+    Status = VL53L0X_SetLimitCheckValue(pMyDevice, VL53L0X_CHECKENABLE_SIGMA_FINAL_RANGE, (FixPoint1616_t)(18 * 65536));
+    Status = VL53L0X_SetMeasurementTimingBudgetMicroSeconds(pMyDevice, 200000);
     VL53L0X_Log(ESP_LOG_DEBUG, "Call of VL53L0X_StartMeasurement\n");
     Status = VL53L0X_StartMeasurement(pMyDevice);
     if (Status != VL53L0X_ERROR_NONE)
