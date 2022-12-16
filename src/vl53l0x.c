@@ -209,13 +209,18 @@ VL53L0X_Error VL53L0X_Device_init(VL53L0X_Dev_t *device)
     uint8_t PhaseCal = 1;
     Status = VL53L0X_SetRefCalibration(pMyDevice, VhvSettings, PhaseCal);
 
-    int32_t pOffsetMicroMeter = -96000;
+    int32_t pOffsetMicroMeter = 50000;
 
     VL53L0X_SetOffsetCalibrationDataMicroMeter(pMyDevice, pOffsetMicroMeter);
-    
-	FixPoint1616_t pXTalkCompensationRateMegaCps = 0;
+
+    FixPoint1616_t pXTalkCompensationRateMegaCps = 0x0000052e;
     VL53L0X_SetXTalkCompensationRateMegaCps(pMyDevice, pXTalkCompensationRateMegaCps);
     VL53L0X_SetXTalkCompensationEnable(pMyDevice, 1);
+
+    // SET PROFILE
+    Status = VL53L0X_SetLimitCheckValue(pMyDevice, VL53L0X_CHECKENABLE_SIGNAL_RATE_FINAL_RANGE, (FixPoint1616_t)(0.25 * 65536));
+    Status = VL53L0X_SetLimitCheckValue(pMyDevice, VL53L0X_CHECKENABLE_SIGMA_FINAL_RANGE, (FixPoint1616_t)(18 * 65536));
+    Status = VL53L0X_SetMeasurementTimingBudgetMicroSeconds(pMyDevice, 200000);
 
     VL53L0X_Log(ESP_LOG_DEBUG, "Call of VL53L0X_SetDeviceMode\n");
     VL53L0X_DeviceModes default_device_mode = VL53L0X_DEVICEMODE_CONTINUOUS_RANGING;
@@ -235,7 +240,7 @@ VL53L0X_Error VL53L0X_Device_init(VL53L0X_Dev_t *device)
     }
 
     VL53L0X_PollingDelay(pMyDevice);
-
+    ESP_LOGI("PROXY", "SENS: %d", dev_settings.proximity_config.sensitivity);
     return Status;
 }
 
@@ -278,18 +283,21 @@ inline bool filter(VL53L0X_RangingMeasurementData_t *RangingMeasurementData) {
     if (RangingMeasurementData->RangeStatus != 0)
         return false;
     ESP_LOGI("PROXY", "%d;%d;%d;%d;%d;%d;%d", RangingMeasurementData->RangeMilliMeter, RangingMeasurementData->RangeDMaxMilliMeter, RangingMeasurementData->SignalRateRtnMegaCps, RangingMeasurementData->AmbientRateRtnMegaCps, RangingMeasurementData->EffectiveSpadRtnCount, RangingMeasurementData->ZoneId, RangingMeasurementData->RangeFractionalPart);
+    //ESP_LOGI("PROXY", "%d;%d", RangingMeasurementData->RangeMilliMeter, RangingMeasurementData->SignalRateRtnMegaCps);
     sens = RangingMeasurementData->SignalRateRtnMegaCps & 0xFFFF0000;
     sens *= RangingMeasurementData->RangeMilliMeter;
-    switch (dev_settings.proximity_config.sensitivity) {
-        default:
-        case PROXIMITY_CONFIGURATION__PROXIMITY_SENSITIVITY__PROXIMITY_OFF:
-            return false;
-        case PROXIMITY_CONFIGURATION__PROXIMITY_SENSITIVITY__PROXIMITY_LOW:
-            return (sens > SENS_LOW);
-        case PROXIMITY_CONFIGURATION__PROXIMITY_SENSITIVITY__PROXIMITY_MED:
-            return (sens > SENS_MED);
-        case PROXIMITY_CONFIGURATION__PROXIMITY_SENSITIVITY__PROXIMITY_HIGH:
-            return (sens > SENS_HIGH);
+    if (RangingMeasurementData->SignalRateRtnMegaCps > 25000) {
+        switch (dev_settings.proximity_config.sensitivity) {
+            default:
+            case PROXIMITY_CONFIGURATION__PROXIMITY_SENSITIVITY__PROXIMITY_OFF:
+                return false;
+            case PROXIMITY_CONFIGURATION__PROXIMITY_SENSITIVITY__PROXIMITY_LOW:
+                return RangingMeasurementData->RangeMilliMeter < 480;
+            case PROXIMITY_CONFIGURATION__PROXIMITY_SENSITIVITY__PROXIMITY_MED:
+                return RangingMeasurementData->RangeMilliMeter < 480 || (RangingMeasurementData->SignalRateRtnMegaCps > 45000);
+            case PROXIMITY_CONFIGURATION__PROXIMITY_SENSITIVITY__PROXIMITY_HIGH:
+                return RangingMeasurementData->RangeMilliMeter < 480 || (RangingMeasurementData->SignalRateRtnMegaCps > 28000);
+        }
     }
     return false;
 }
