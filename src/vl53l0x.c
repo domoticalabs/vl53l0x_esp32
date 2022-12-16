@@ -201,10 +201,28 @@ VL53L0X_Error VL53L0X_Device_init(VL53L0X_Dev_t *device)
         return Status;
     }
 
+    ESP_LOGI(TAG, "Calibrating SPAD...");
+
+    //================================
+    // RefCalibration Data Handling
+    //================================
+
+    uint32_t refSpadCount;
+    uint8_t isApertureSpads;
+    VL53L0X_Log(ESP_LOG_DEBUG, "Call of VL53L0X_PerformRefSpadManagement\n");
+    Status = VL53L0X_PerformRefSpadManagement(pMyDevice,
+                                              &refSpadCount, &isApertureSpads);  // Device Initialization
+    if (Status != VL53L0X_ERROR_NONE) {
+        print_pal_error(Status);
+        return Status;
+    }
+
+    ESP_LOGI(TAG, "SPAD: %d, %u", refSpadCount, isApertureSpads);
+
+    ESP_LOGI(TAG, "Calibrating Ref...");
+
     uint8_t VhvSettings;
     uint8_t PhaseCal;
-
-    VL53L0X_Log(ESP_LOG_DEBUG, "Call of VL53L0X_PerformRefCalibration\n");
     Status = VL53L0X_PerformRefCalibration(pMyDevice,
                                             &VhvSettings, &PhaseCal); // Device Initialization
     if (Status != VL53L0X_ERROR_NONE)
@@ -212,25 +230,27 @@ VL53L0X_Error VL53L0X_Device_init(VL53L0X_Dev_t *device)
         print_pal_error(Status);
         return Status;
     }
+    ESP_LOGI(TAG, "REF: %u, %u", VhvSettings, PhaseCal);
 
-    //================================
-    // TODO: RefCalibration Data Handling
-    //================================
+    ESP_LOGI(TAG, "Calibrating Offset...");
+    ESP_LOGI(TAG, "Please place a white target at 25cm...");
+    vTaskDelay(pdMS_TO_TICKS(5000));
 
-    uint32_t refSpadCount;
-    uint8_t isApertureSpads;
-    VL53L0X_Log(ESP_LOG_DEBUG, "Call of VL53L0X_PerformRefSpadManagement\n");
-    Status = VL53L0X_PerformRefSpadManagement(pMyDevice,
-                                                &refSpadCount, &isApertureSpads); // Device Initialization
-    if (Status != VL53L0X_ERROR_NONE)
-    {
-        print_pal_error(Status);
-        return Status;
-    }
+    FixPoint1616_t CalDistanceMilliMeter = (25<<16) | 0;
+    int32_t pOffsetMicroMeter;
 
-    //================================
-    // TODO: RefSpadManagement Data Handling
-    //================================
+    VL53L0X_PerformOffsetCalibration(pMyDevice, CalDistanceMilliMeter, &pOffsetMicroMeter);
+    ESP_LOGI(TAG, "OFFSET: %d", pOffsetMicroMeter);
+
+    ESP_LOGI(TAG, "Calibrating xTalk...");
+    ESP_LOGI(TAG, "Please place a grey target at 25cm...");
+    vTaskDelay(pdMS_TO_TICKS(5000));
+
+    FixPoint1616_t XTalkCalDistance = (25 << 16) | 0;
+	FixPoint1616_t pXTalkCompensationRateMegaCps;
+
+    VL53L0X_PerformXTalkCalibration(pMyDevice, XTalkCalDistance, &pXTalkCompensationRateMegaCps);
+    ESP_LOGI(TAG, "XTALK: %d.%d", pXTalkCompensationRateMegaCps >> 16, pXTalkCompensationRateMegaCps & 0xFFFF);
 
     VL53L0X_Log(ESP_LOG_DEBUG, "Call of VL53L0X_SetDeviceMode\n");
     VL53L0X_DeviceModes default_device_mode = VL53L0X_DEVICEMODE_CONTINUOUS_RANGING;
