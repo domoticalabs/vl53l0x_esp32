@@ -313,12 +313,15 @@ VL53L0X_Error VL53L0X_Device_deinit(VL53L0X_Dev_t *device)
 #define SENS_MED    43500000    // 80cm
 #define SENS_LOW    116000000   // 50cm
 inline bool filter(VL53L0X_RangingMeasurementData_t *RangingMeasurementData) {
-    uint32_t sens;
+    float sens;
     if (RangingMeasurementData->RangeStatus != 0)
         return false;
-    ESP_LOGI("PROXY", "%d;%d;%d;%d;%d;%d;%d", RangingMeasurementData->RangeMilliMeter, RangingMeasurementData->RangeDMaxMilliMeter, RangingMeasurementData->SignalRateRtnMegaCps, RangingMeasurementData->AmbientRateRtnMegaCps, RangingMeasurementData->EffectiveSpadRtnCount, RangingMeasurementData->ZoneId, RangingMeasurementData->RangeFractionalPart);
+    /*ESP_LOGI("PROXY", "%d;%d;%d;%d;%d;%d;%d", RangingMeasurementData->RangeMilliMeter, RangingMeasurementData->RangeDMaxMilliMeter, RangingMeasurementData->SignalRateRtnMegaCps, RangingMeasurementData->AmbientRateRtnMegaCps, RangingMeasurementData->EffectiveSpadRtnCount, RangingMeasurementData->ZoneId, RangingMeasurementData->RangeFractionalPart);
     sens = RangingMeasurementData->SignalRateRtnMegaCps & 0xFFFF0000;
-    sens *= RangingMeasurementData->RangeMilliMeter;
+    sens = RangingMeasurementData->RangeMilliMeter;*/
+    sens = ((float)RangingMeasurementData->SignalRateRtnMegaCps) / 65536.0;
+    sens *= (float)RangingMeasurementData->RangeMilliMeter;
+    ESP_LOGI("PROXY", "%d;%d;%.3f", RangingMeasurementData->RangeMilliMeter, RangingMeasurementData->SignalRateRtnMegaCps, sens);
     switch (dev_settings.proximity_config.sensitivity) {
         default:
         case PROXIMITY_CONFIGURATION__PROXIMITY_SENSITIVITY__PROXIMITY_OFF:
