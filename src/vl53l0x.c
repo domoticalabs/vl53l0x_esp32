@@ -234,7 +234,7 @@ VL53L0X_Error VL53L0X_Device_init(VL53L0X_Dev_t *device)
 
     ESP_LOGI(TAG, "Calibrating Offset...");
     ESP_LOGI(TAG, "Please place a white target at 10cm...");
-    vTaskDelay(pdMS_TO_TICKS(5000));
+    vTaskDelay(pdMS_TO_TICKS(2000));
 
     FixPoint1616_t CalDistanceMilliMeter = (100<<16) | 0;
     int32_t pOffsetMicroMeter;
@@ -244,7 +244,7 @@ VL53L0X_Error VL53L0X_Device_init(VL53L0X_Dev_t *device)
 
     ESP_LOGI(TAG, "Calibrating xTalk...");
     ESP_LOGI(TAG, "Please place a grey target at 60cm...");
-    vTaskDelay(pdMS_TO_TICKS(5000));
+    vTaskDelay(pdMS_TO_TICKS(3000));
 
     FixPoint1616_t XTalkCalDistance = (600 << 16) | 0;
 	FixPoint1616_t pXTalkCompensationRateMegaCps;
@@ -262,9 +262,16 @@ VL53L0X_Error VL53L0X_Device_init(VL53L0X_Dev_t *device)
     }
 
     // SET PROFILE
-    Status = VL53L0X_SetLimitCheckValue(pMyDevice, VL53L0X_CHECKENABLE_SIGNAL_RATE_FINAL_RANGE, (FixPoint1616_t)(0.25 * 65536));
+    /*Status = VL53L0X_SetLimitCheckValue(pMyDevice, VL53L0X_CHECKENABLE_SIGNAL_RATE_FINAL_RANGE, (FixPoint1616_t)(0.25 * 65536));
     Status = VL53L0X_SetLimitCheckValue(pMyDevice, VL53L0X_CHECKENABLE_SIGMA_FINAL_RANGE, (FixPoint1616_t)(18 * 65536));
+    Status = VL53L0X_SetMeasurementTimingBudgetMicroSeconds(pMyDevice, 200000);*/
+
+    Status = VL53L0X_SetLimitCheckValue(pMyDevice, VL53L0X_CHECKENABLE_SIGNAL_RATE_FINAL_RANGE, (FixPoint1616_t)(0.1 * 65536));
+    Status = VL53L0X_SetLimitCheckValue(pMyDevice, VL53L0X_CHECKENABLE_SIGMA_FINAL_RANGE, (FixPoint1616_t)(60 * 65536));
     Status = VL53L0X_SetMeasurementTimingBudgetMicroSeconds(pMyDevice, 200000);
+    Status = VL53L0X_SetVcselPulsePeriod(pMyDevice, VL53L0X_VCSEL_PERIOD_PRE_RANGE, 18);
+    Status = VL53L0X_SetVcselPulsePeriod(pMyDevice, VL53L0X_VCSEL_PERIOD_FINAL_RANGE, 14);
+
     VL53L0X_Log(ESP_LOG_DEBUG, "Call of VL53L0X_StartMeasurement\n");
     Status = VL53L0X_StartMeasurement(pMyDevice);
     if (Status != VL53L0X_ERROR_NONE)
