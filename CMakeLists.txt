@@ -16,7 +16,8 @@ set(includes
 )
 
 idf_component_register(SRCS ${sources}
-                    INCLUDE_DIRS ${includes})
+                    INCLUDE_DIRS ${includes}
+                    PRIV_REQUIRES nvs)
 
 target_compile_options(${COMPONENT_LIB} PRIVATE "-Wno-maybe-uninitialized")
 

@@ -16,6 +16,7 @@ extern "C" {
 #endif
 
 VL53L0X_Error VL53L0X_Device_init(VL53L0X_Dev_t *device);
+VL53L0X_Error VL53L0X_Device_calibration(VL53L0X_Dev_t *device);
 VL53L0X_Error VL53L0X_Device_deinit(VL53L0X_Dev_t *device);
 VL53L0X_Error VL53L0X_Device_getMeasurement(VL53L0X_Dev_t *device, uint16_t* data);
 

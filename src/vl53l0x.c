@@ -7,20 +7,24 @@
  * 
  */
 #include "vl53l0x.h"
-#include "vl53l0x_platform_log.h"
-
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
 
 #include "esp_log.h"
-
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "i2c_mux.h"
-
+#include "nvs_flash.h"
 #include "struct.h"
+#include "vl53l0x_platform_log.h"
 
 #define VERSION_REQUIRED_MAJOR 1
 #define VERSION_REQUIRED_MINOR 0
 #define VERSION_REQUIRED_BUILD 2
+
+#define N_READINGS 3
+#define XTALK_END 5400
+#define XTALK_START 25
+#define XTALK_STEP 25
+#define XTALK_TARGET_DST 600
 
 #define IO_NUM          GPIO_NUM_5
 #define IO_SEL(num)     (1ULL << (num))
@@ -114,8 +118,12 @@ static VL53L0X_Error WaitStopCompleted(VL53L0X_DEV Dev)
     return Status;
 }
 
-VL53L0X_Error VL53L0X_Device_init(VL53L0X_Dev_t *device)
+VL53L0X_Error _VL53L0X_Device_init(VL53L0X_Dev_t *device, uint32_t *xtalk, uint8_t config)
 {
+    static uint32_t refSpadCount = 0;
+    static uint8_t isApertureSpads = 0;
+    static uint8_t VhvSettings = 0;
+    static uint8_t PhaseCal = 0;
     VL53L0X_Error Status = VL53L0X_ERROR_NONE;
     VL53L0X_Dev_t *pMyDevice = device;
     VL53L0X_Version_t Version;
@@ -123,6 +131,8 @@ VL53L0X_Error VL53L0X_Device_init(VL53L0X_Dev_t *device)
     VL53L0X_DeviceInfo_t DeviceInfo;
 
     esp_log_level_set(TAG, ESP_LOG_INFO);
+
+    ESP_LOGI("PROXY", "Applying XTALK: %u", *xtalk);
 
     pMyDevice->comms_type = 1;
     pMyDevice->comms_speed_khz = I2C_MUX_BAUDRATE/1000;
@@ -201,26 +211,61 @@ VL53L0X_Error VL53L0X_Device_init(VL53L0X_Dev_t *device)
         return Status;
     }
 
-    uint32_t refSpadCount = 8;
-    uint8_t isApertureSpads = 1;
-    Status = VL53L0X_SetReferenceSpads(pMyDevice, refSpadCount, isApertureSpads);
+    ESP_LOGI(TAG, "Calibrating SPAD...");
 
-    uint8_t VhvSettings = 27;
-    uint8_t PhaseCal = 1;
-    Status = VL53L0X_SetRefCalibration(pMyDevice, VhvSettings, PhaseCal);
+    //================================
+    // RefCalibration Data Handling
+    //================================
 
-    int32_t pOffsetMicroMeter = 15000;
+    if (refSpadCount == 0) {
+        VL53L0X_Log(ESP_LOG_DEBUG, "Call of VL53L0X_PerformRefSpadManagement\n");
+        Status = VL53L0X_PerformRefSpadManagement(pMyDevice,
+                                                &refSpadCount, &isApertureSpads);  // Device Initialization
+        if (Status != VL53L0X_ERROR_NONE) {
+            print_pal_error(Status);
+            return Status;
+        }
+
+        ESP_LOGI(TAG, "SPAD: %d, %u", refSpadCount, isApertureSpads);
+
+        ESP_LOGI(TAG, "Calibrating Ref...");
+
+        Status = VL53L0X_PerformRefCalibration(pMyDevice,
+                                            &VhvSettings, &PhaseCal);  // Device Initialization
+        if (Status != VL53L0X_ERROR_NONE) {
+            print_pal_error(Status);
+            return Status;
+        }
+        ESP_LOGI(TAG, "REF: %u, %u", VhvSettings, PhaseCal);
+    } else {
+        VL53L0X_SetReferenceSpads(pMyDevice, refSpadCount, isApertureSpads);  // Device Initialization
+        VL53L0X_SetRefCalibration(pMyDevice, VhvSettings, PhaseCal);  // Device Initialization
+    }
+
+    int32_t pOffsetMicroMeter = 10800;
 
     VL53L0X_SetOffsetCalibrationDataMicroMeter(pMyDevice, pOffsetMicroMeter);
 
-    FixPoint1616_t pXTalkCompensationRateMegaCps = 0x00000030;
-    VL53L0X_SetXTalkCompensationRateMegaCps(pMyDevice, pXTalkCompensationRateMegaCps);
-    VL53L0X_SetXTalkCompensationEnable(pMyDevice, 1);
+    if (config == 2) {
+        VL53L0X_PerformXTalkCalibration(pMyDevice, XTALK_TARGET_DST << 16, xtalk);
+        VL53L0X_SetXTalkCompensationRateMegaCps(pMyDevice, xtalk);
+        VL53L0X_SetXTalkCompensationEnable(pMyDevice, 1);
+    } else if (*xtalk > 0) {
+        FixPoint1616_t pXTalkCompensationRateMegaCps = *xtalk;
+        VL53L0X_SetXTalkCompensationRateMegaCps(pMyDevice, pXTalkCompensationRateMegaCps);
+        VL53L0X_SetXTalkCompensationEnable(pMyDevice, 1);
+    }
 
     // SET PROFILE
-    Status = VL53L0X_SetLimitCheckValue(pMyDevice, VL53L0X_CHECKENABLE_SIGNAL_RATE_FINAL_RANGE, (FixPoint1616_t)(0.25 * 65536));
+    /*Status = VL53L0X_SetLimitCheckValue(pMyDevice, VL53L0X_CHECKENABLE_SIGNAL_RATE_FINAL_RANGE, (FixPoint1616_t)(0.25 * 65536));
     Status = VL53L0X_SetLimitCheckValue(pMyDevice, VL53L0X_CHECKENABLE_SIGMA_FINAL_RANGE, (FixPoint1616_t)(18 * 65536));
-    Status = VL53L0X_SetMeasurementTimingBudgetMicroSeconds(pMyDevice, 200000);
+    Status = VL53L0X_SetMeasurementTimingBudgetMicroSeconds(pMyDevice, 200000);*/
+    
+    Status = VL53L0X_SetLimitCheckValue(pMyDevice, VL53L0X_CHECKENABLE_SIGNAL_RATE_FINAL_RANGE, (FixPoint1616_t)(0.1 * 65536));
+    Status = VL53L0X_SetLimitCheckValue(pMyDevice, VL53L0X_CHECKENABLE_SIGMA_FINAL_RANGE, (FixPoint1616_t)(60 * 65536));
+    Status = VL53L0X_SetMeasurementTimingBudgetMicroSeconds(pMyDevice, (config != 0) ? 33000: 200000);
+    Status = VL53L0X_SetVcselPulsePeriod(pMyDevice, VL53L0X_VCSEL_PERIOD_PRE_RANGE, 18);
+    Status = VL53L0X_SetVcselPulsePeriod(pMyDevice, VL53L0X_VCSEL_PERIOD_FINAL_RANGE, 14);
 
     VL53L0X_Log(ESP_LOG_DEBUG, "Call of VL53L0X_SetDeviceMode\n");
     VL53L0X_DeviceModes default_device_mode = VL53L0X_DEVICEMODE_CONTINUOUS_RANGING;
@@ -242,6 +287,96 @@ VL53L0X_Error VL53L0X_Device_init(VL53L0X_Dev_t *device)
     VL53L0X_PollingDelay(pMyDevice);
     ESP_LOGI("PROXY", "SENS: %d", dev_settings.proximity_config.sensitivity);
     return Status;
+}
+
+VL53L0X_Error VL53L0X_Device_init(VL53L0X_Dev_t *device) {
+    uint32_t calibr = 380;
+
+    // Read calibration from NVS
+    nvs_handle_t nvs_handle;
+    esp_err_t err = nvs_open("proxy", NVS_READWRITE, &nvs_handle);
+    if (err == ESP_OK) {
+        err = nvs_get_u32(nvs_handle, "calibr", &calibr);
+        nvs_close(nvs_handle);
+    }
+
+    return _VL53L0X_Device_init(device, &calibr, 0);
+}
+
+VL53L0X_Error VL53L0X_Device_calibration(VL53L0X_Dev_t *device) {
+    uint32_t xtalk;
+    VL53L0X_Error error;
+    uint32_t best, best_distance = 0xFFFFFFFF, actual_best_distance, step = 0, start = 0, end = 0;
+    uint8_t i = 0, found = 0;
+
+    VL53L0X_Device_deinit(device);
+
+    /*if ((error = _VL53L0X_Device_init(device, &xtalk, 2)) != VL53L0X_ERROR_NONE) {
+        return error;
+    }
+    for (i = 0; i < N_READINGS; i++) {
+        VL53L0X_RangingMeasurementData_t RangingMeasurementData;
+        error = VL53L0X_GetRangingMeasurementData(device, &RangingMeasurementData);
+        if (error != VL53L0X_ERROR_TIME_OUT && error != VL53L0X_ERROR_CONTROL_INTERFACE) {
+            actual_best_distance = XTALK_TARGET_DST - RangingMeasurementData.RangeMilliMeter;
+            if (actual_best_distance < 0) {
+                actual_best_distance *= -1;
+            }
+            ESP_LOGI("PROXY", "Actual: %u, Best: %u", actual_best_distance, best_distance);
+            if (actual_best_distance < best_distance) {
+                best_distance = actual_best_distance;
+                best = xtalk;
+                if (best_distance < 80) {
+                    found = 1;
+                }
+            }
+        }
+        vTaskDelay(pdMS_TO_TICKS(20));
+    }
+
+    VL53L0X_Device_deinit(device);*/
+
+    for (xtalk = XTALK_START; !found && xtalk < XTALK_END; xtalk += XTALK_STEP) {
+        ESP_LOGI("PROXY", "xTalk: %u", xtalk);
+        if ((error = _VL53L0X_Device_init(device, &xtalk, 1)) != VL53L0X_ERROR_NONE) {
+            return error;
+        }
+
+        for (i = 0; i < N_READINGS; i++) {
+            VL53L0X_RangingMeasurementData_t RangingMeasurementData;
+            error = VL53L0X_GetRangingMeasurementData(device, &RangingMeasurementData);
+            if (error != VL53L0X_ERROR_TIME_OUT && error != VL53L0X_ERROR_CONTROL_INTERFACE) {
+                actual_best_distance = XTALK_TARGET_DST - RangingMeasurementData.RangeMilliMeter;
+                if (actual_best_distance < 0) {
+                    actual_best_distance *= -1;
+                }
+                ESP_LOGI("PROXY", "Actual: %u, Best: %u", actual_best_distance, best_distance);
+                if (actual_best_distance < best_distance) {
+                    best_distance = actual_best_distance;
+                    best = xtalk;
+                    if (best_distance < 80) {
+                        found = 1;
+                    }
+                }
+            }
+            vTaskDelay(pdMS_TO_TICKS(20));
+        }
+
+        VL53L0X_Device_deinit(device);
+        vTaskDelay(pdMS_TO_TICKS(20));
+    }
+
+    ESP_LOGI("PROXY", "Best %u", best);
+    // Save in NVS
+    nvs_handle_t nvs_handle;
+    esp_err_t err = nvs_open("proxy", NVS_READWRITE, &nvs_handle);
+    if (err == ESP_OK) {
+        err = nvs_set_u32(nvs_handle, "calibr", best);
+        nvs_commit(nvs_handle);
+        nvs_close(nvs_handle);
+    }
+
+    return VL53L0X_ERROR_NONE;
 }
 
 VL53L0X_Error VL53L0X_Device_deinit(VL53L0X_Dev_t *device)
@@ -282,26 +417,20 @@ inline bool filter(VL53L0X_RangingMeasurementData_t *RangingMeasurementData) {
     float sens;
     if (RangingMeasurementData->RangeStatus != 0)
         return false;
-    //ESP_LOGI("PROXY", "%d;%d;%d;%d;%d;%d;%d", RangingMeasurementData->RangeMilliMeter, RangingMeasurementData->RangeDMaxMilliMeter, RangingMeasurementData->SignalRateRtnMegaCps, RangingMeasurementData->AmbientRateRtnMegaCps, RangingMeasurementData->EffectiveSpadRtnCount, RangingMeasurementData->ZoneId, RangingMeasurementData->RangeFractionalPart);
-    //ESP_LOGI("PROXY", "%d;%d", RangingMeasurementData->RangeMilliMeter, RangingMeasurementData->SignalRateRtnMegaCps);
     sens = ((float) RangingMeasurementData->SignalRateRtnMegaCps) / 65536.0;
     sens *= (float) RangingMeasurementData->RangeMilliMeter;
     ESP_LOGI("PROXY", "%d;%d;%.3f", RangingMeasurementData->RangeMilliMeter, RangingMeasurementData->SignalRateRtnMegaCps, sens);
     if (RangingMeasurementData->SignalRateRtnMegaCps > 60000) {
-        // Hand low
-        if (RangingMeasurementData->RangeMilliMeter < 330 && sens > 445.0) {
-            return true;
-        }
         switch (dev_settings.proximity_config.sensitivity) {
             default:
             case PROXIMITY_CONFIGURATION__PROXIMITY_SENSITIVITY__PROXIMITY_OFF:
                 return false;
             case PROXIMITY_CONFIGURATION__PROXIMITY_SENSITIVITY__PROXIMITY_LOW:
-                return sens > 1000.0;
+                return RangingMeasurementData->RangeMilliMeter <= 350;
             case PROXIMITY_CONFIGURATION__PROXIMITY_SENSITIVITY__PROXIMITY_MED:
-                return sens > 630.0;
+                return RangingMeasurementData->RangeMilliMeter <= 500;
             case PROXIMITY_CONFIGURATION__PROXIMITY_SENSITIVITY__PROXIMITY_HIGH:
-                return sens > 190.0;
+                return RangingMeasurementData->RangeMilliMeter <= 600;
         }
     }
     return false;
