@@ -181,7 +181,7 @@ void proximity_calibration_draw(void) {
     
     //Creating title label
     lv_obj_t * lbl = lv_label_create(screen, NULL);
-    lv_label_set_text(lbl, "Proximity Calibration");
+    lv_label_set_text(lbl, "CALIBRATION");
     lv_obj_set_style_local_text_font(lbl, LV_LABEL_PART_MAIN, LV_STATE_DEFAULT, &BahnschriftBase);
     lv_obj_set_style_local_text_color(lbl, LV_LABEL_PART_MAIN, LV_STATE_DEFAULT, lv_color_darken(PageInfo.font_color[PageInfo.info_theme.theme_selected][0], 50));
     lv_obj_align(lbl, NULL, LV_ALIGN_IN_TOP_MID, 0, 20);
@@ -213,11 +213,11 @@ void proximity_calibration_draw(void) {
             snprintf(buf, 127, "Calibration failed\nPlase enter\nagain in\nthis page");
             break;
     }
-    lv_label_set_text(lbl, buf);
-    lv_label_set_align(lbl, LV_LABEL_ALIGN_CENTER);
-    lv_obj_set_style_local_text_font(lbl, LV_LABEL_PART_MAIN, LV_STATE_DEFAULT, &BahnschriftBase);
-    lv_obj_set_style_local_text_color(lbl, LV_LABEL_PART_MAIN, LV_STATE_DEFAULT, PageInfo.font_color[PageInfo.info_theme.theme_selected][0]);
-    lv_obj_align(lbl, NULL, LV_ALIGN_IN_TOP_MID, 0, 55);
+    lv_label_set_text(lbl_instructions, buf);
+    lv_label_set_align(lbl_instructions, LV_LABEL_ALIGN_CENTER);
+    lv_obj_set_style_local_text_font(lbl_instructions, LV_LABEL_PART_MAIN, LV_STATE_DEFAULT, &BahnschriftBase);
+    lv_obj_set_style_local_text_color(lbl_instructions, LV_LABEL_PART_MAIN, LV_STATE_DEFAULT, PageInfo.font_color[PageInfo.info_theme.theme_selected][0]);
+    lv_obj_align(lbl_instructions, NULL, LV_ALIGN_IN_TOP_MID, 0, 55);
     //lv_obj_set_width(lbl, 10);
     
 
