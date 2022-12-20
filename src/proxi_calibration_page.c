@@ -205,19 +205,19 @@ void proximity_calibration_draw(void) {
             break;
 
         case PROXI_CALIBR_COUNTDOWN:
-            snprintf(buf, 127, "Stand still\nat 60cm\nfrom the device\nCalibration will\nstart in %d", proxi_calibration_data.countdown);
+            snprintf(buf, 127, "Stand still\nat 60cm\nfrom the device\n\nCalibration will\nstart in %d", proxi_calibration_data.countdown);
             break;
 
         case PROXI_CALIBR_RUNNING:
-            snprintf(buf, 127, "Device is\ncalibrating\nPlease stand\nstill");
+            snprintf(buf, 127, "Device is\ncalibrating\n\nPlease stand\nstill");
             break;
 
         case PROXI_CALIBR_END:
-            snprintf(buf, 127, "Calibration\ncompleted\nYou can now\nexit this page");
+            snprintf(buf, 127, "Calibration\ncompleted\n\nYou can now\nexit this page");
             break;
 
         default:
-            snprintf(buf, 127, "Calibration failed\nPlase enter\nagain in\nthis page");
+            snprintf(buf, 127, "Calibration failed\n\nPlase enter\nagain in\nthis page");
             break;
     }
     lv_label_set_text(lbl_instructions, buf);
