@@ -306,35 +306,10 @@ VL53L0X_Error VL53L0X_Device_init(VL53L0X_Dev_t *device) {
 VL53L0X_Error VL53L0X_Device_calibration(VL53L0X_Dev_t *device) {
     uint32_t xtalk;
     VL53L0X_Error error;
-    uint32_t best, best_distance = 0xFFFFFFFF, actual_best_distance, step = 0, start = 0, end = 0;
-    uint8_t i = 0, found = 0;
+    uint32_t best, best_distance = 0xFFFFFFFF, actual_best_distance, step = 0, start = 0, end = 0, improvement;
+    uint8_t i = 0, found = 0, counter = 0, status = 0;
 
     ESP_LOGI("PROXY", "Device deinit %d", VL53L0X_Device_deinit(device));
-
-    /*if ((error = _VL53L0X_Device_init(device, &xtalk, 2)) != VL53L0X_ERROR_NONE) {
-        return error;
-    }
-    for (i = 0; i < N_READINGS; i++) {
-        VL53L0X_RangingMeasurementData_t RangingMeasurementData;
-        error = VL53L0X_GetRangingMeasurementData(device, &RangingMeasurementData);
-        if (error != VL53L0X_ERROR_TIME_OUT && error != VL53L0X_ERROR_CONTROL_INTERFACE) {
-            actual_best_distance = XTALK_TARGET_DST - RangingMeasurementData.RangeMilliMeter;
-            if (actual_best_distance < 0) {
-                actual_best_distance *= -1;
-            }
-            ESP_LOGI("PROXY", "Actual: %u, Best: %u", actual_best_distance, best_distance);
-            if (actual_best_distance < best_distance) {
-                best_distance = actual_best_distance;
-                best = xtalk;
-                if (best_distance < 80) {
-                    found = 1;
-                }
-            }
-        }
-        vTaskDelay(pdMS_TO_TICKS(20));
-    }
-
-    VL53L0X_Device_deinit(device);*/
 
     for (xtalk = XTALK_START; !found && xtalk < XTALK_END; xtalk += XTALK_STEP) {
         ESP_LOGI("PROXY", "xTalk: %u", xtalk);
@@ -353,10 +328,18 @@ VL53L0X_Error VL53L0X_Device_calibration(VL53L0X_Dev_t *device) {
                 }
                 ESP_LOGI("PROXY", "Actual: %u, Best: %u", actual_best_distance, best_distance);
                 if (actual_best_distance < best_distance) {
+                    status = 1;
+                    counter = 0;
                     best_distance = actual_best_distance;
                     best = xtalk;
-                    if (best_distance < 80) {
+                    if (best_distance < 50) {
                         found = 1;
+                    }
+                } else if (status == 1 && best_distance < 300) {
+                    if (actual_best_distance - best_distance > 100) {
+                        if (counter++ > (best_distance>>6)*N_READINGS) {
+                            found = 1;
+                        }
                     }
                 }
             }
@@ -367,17 +350,22 @@ VL53L0X_Error VL53L0X_Device_calibration(VL53L0X_Dev_t *device) {
         vTaskDelay(pdMS_TO_TICKS(20));
     }
 
-    ESP_LOGI("PROXY", "Best %u", best);
-    // Save in NVS
-    nvs_handle_t nvs_handle;
-    esp_err_t err = nvs_open("proxy", NVS_READWRITE, &nvs_handle);
-    if (err == ESP_OK) {
-        err = nvs_set_u32(nvs_handle, "calibr", best);
-        nvs_commit(nvs_handle);
-        nvs_close(nvs_handle);
+    if (best_distance < 300) {
+
+        ESP_LOGI("PROXY", "Best %u", best);
+        // Save in NVS
+        nvs_handle_t nvs_handle;
+        esp_err_t err = nvs_open("proxy", NVS_READWRITE, &nvs_handle);
+        if (err == ESP_OK) {
+            err = nvs_set_u32(nvs_handle, "calibr", best);
+            nvs_commit(nvs_handle);
+            nvs_close(nvs_handle);
+        }
+
+        return VL53L0X_ERROR_NONE;
     }
 
-    return VL53L0X_ERROR_NONE;
+    return VL53L0X_ERROR_CALIBRATION_WARNING;
 }
 
 VL53L0X_Error VL53L0X_Device_deinit(VL53L0X_Dev_t *device)

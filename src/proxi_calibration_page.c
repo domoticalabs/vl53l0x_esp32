@@ -206,7 +206,7 @@ void proximity_calibration_draw(void) {
             break;
 
         case PROXI_CALIBR_END:
-            snprintf(buf, 127, "Calibration completed\nYou can now\nexit this page");
+            snprintf(buf, 127, "Calibration\ncompleted\nYou can now\nexit this page");
             break;
 
         default:
