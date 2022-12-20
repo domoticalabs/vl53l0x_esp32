@@ -18,6 +18,8 @@ typedef enum {
     PROXI_CALIBR_START,
     PROXI_CALIBR_COUNTDOWN,
     PROXI_CALIBR_RUNNING,
+    PROXI_CALIBR_COUNTDOWN_EMPTY,
+    PROXI_CALIBR_RUNNING_EMPTY,
     PROXI_CALIBR_END,
     PROXI_CALIBR_FAIL
 } proxi_calibration_state_t;
@@ -76,10 +78,38 @@ static void _proximity_calibration_fsm() {
                 }
                 changed = true;
             }
+        } else if (proxi_calibration_data.state == PROXI_CALIBR_COUNTDOWN_EMPTY) {
+            if (xTaskGetTickCount() - start_countdown_time > pdMS_TO_TICKS(1000)) {
+                ESP_LOGI("PROXY", "COUNTDOWN TICK %d", proxi_calibration_data.countdown);
+                start_countdown_time = xTaskGetTickCount();
+                if (proxi_calibration_data.countdown == 1) {
+                    proxi_calibration_data.state = PROXI_CALIBR_RUNNING_EMPTY;
+                    do_calibr = 2;
+                } else {
+                    proxi_calibration_data.countdown--;
+                }
+                changed = true;
+            }
         } else if (proxi_calibration_data.state == PROXI_CALIBR_RUNNING) {
-            if (do_calibr != 1) {
+            if (do_calibr == 0) {
                 ESP_LOGI("PROXY", "Calibration END");
-                proxi_calibration_data.state = (do_calibr == 0) ? PROXI_CALIBR_END : PROXI_CALIBR_FAIL;
+                proxi_calibration_data.state = PROXI_CALIBR_COUNTDOWN_EMPTY;
+                proxi_calibration_data.countdown = 5;
+                changed = true;
+            } else if (do_calibr != 1) {
+                ESP_LOGI("PROXY", "Calibration END");
+                proxi_calibration_data.state = PROXI_CALIBR_FAIL;
+                do_calibr = 0;
+                changed = true;
+            }
+        } else if (proxi_calibration_data.state == PROXI_CALIBR_RUNNING_EMPTY) {
+            if (do_calibr == 0) {
+                ESP_LOGI("PROXY", "Calibration END");
+                proxi_calibration_data.state = PROXI_CALIBR_END;
+                changed = true;
+            } else if (do_calibr != 2) {
+                ESP_LOGI("PROXY", "Calibration END");
+                proxi_calibration_data.state = PROXI_CALIBR_FAIL;
                 do_calibr = 0;
                 changed = true;
             }
@@ -90,7 +120,7 @@ static void _proximity_calibration_fsm() {
             switch (proxi_calibration_data.state)
             {
                 case PROXI_CALIBR_START:
-                    proxi_calibration_data.countdown = 3;
+                    proxi_calibration_data.countdown = 5;
                     start_countdown_time = xTaskGetTickCount();
                     proxi_calibration_data.state = PROXI_CALIBR_COUNTDOWN;
                     changed = true;
@@ -114,14 +144,11 @@ static void _proximity_calibration_fsm() {
     }
     ESP_LOGI("PROXY", "CALIBRATION TASK END");
     proximity_calibration_task = NULL;
-    proxi_calibration_data.state = PROXI_CALIBR_START;
     if (indexPages == PROXY_CALIBRATION_PAGE) {
         vTaskDelay(pdMS_TO_TICKS(2000));
-        if (indexPages == PROXY_CALIBRATION_PAGE) {
-            oldIndexPag = 255;
-            indexPages = 0;
-            recreate_page(false);
-        }
+    }
+    if (proxi_calibration_data.state == PROXI_CALIBR_END) {
+        esp_restart();
     }
     vTaskDelete(NULL);
 }
@@ -208,8 +235,16 @@ void proximity_calibration_draw(void) {
             snprintf(buf, 127, "Stand still\nat 60cm\nfrom the device\n\nCalibration will\nstart in %d", proxi_calibration_data.countdown);
             break;
 
+        case PROXI_CALIBR_COUNTDOWN_EMPTY:
+            snprintf(buf, 127, "Stand still\nat 100cm\nfrom the device\n\nCalibration will\nstart in %d", proxi_calibration_data.countdown);
+            break;
+
         case PROXI_CALIBR_RUNNING:
             snprintf(buf, 127, "Device is\ncalibrating\n\nPlease stand\nstill");
+            break;
+
+        case PROXI_CALIBR_RUNNING_EMPTY:
+            snprintf(buf, 127, "Device is\ncalibrating\n\nPlease wait");
             break;
 
         case PROXI_CALIBR_END:
