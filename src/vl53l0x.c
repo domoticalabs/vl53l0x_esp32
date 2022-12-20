@@ -306,6 +306,7 @@ VL53L0X_Error VL53L0X_Device_init(VL53L0X_Dev_t *device) {
     return _VL53L0X_Device_init(device, &calibr, 0);
 }
 
+uint8_t calibration_abort;
 VL53L0X_Error VL53L0X_Device_calibration(VL53L0X_Dev_t *device) {
     uint32_t xtalk;
     VL53L0X_Error error;
@@ -314,7 +315,7 @@ VL53L0X_Error VL53L0X_Device_calibration(VL53L0X_Dev_t *device) {
 
     ESP_LOGI("PROXY", "Device deinit %d", VL53L0X_Device_deinit(device));
 
-    for (xtalk = XTALK_START; !found && xtalk < XTALK_END; xtalk += XTALK_STEP) {
+    for (xtalk = XTALK_START; !calibration_abort && !found && xtalk < XTALK_END; xtalk += XTALK_STEP) {
         ESP_LOGI("PROXY", "xTalk: %u", xtalk);
         if ((error = _VL53L0X_Device_init(device, &xtalk, 1)) != VL53L0X_ERROR_NONE) {
             ESP_LOGE("PROXY", "Error %d", error);
@@ -354,7 +355,7 @@ VL53L0X_Error VL53L0X_Device_calibration(VL53L0X_Dev_t *device) {
         vTaskDelay(pdMS_TO_TICKS(20));
     }
 
-    if (best_distance < 300) {
+    if (!calibration_abort && best_distance < 300) {
 
         ESP_LOGI("PROXY", "Best %u", best);
         // Save in NVS
@@ -373,7 +374,8 @@ VL53L0X_Error VL53L0X_Device_calibration(VL53L0X_Dev_t *device) {
 
         return VL53L0X_ERROR_NONE;
     }
-
+    
+    calibration_abort = 0;
     return VL53L0X_ERROR_CALIBRATION_WARNING;
 }
 

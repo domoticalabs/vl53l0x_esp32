@@ -36,6 +36,7 @@ extern StructPage PageInfo;                         //Necessary to know which th
 
 // Variable to set start of calibration procedure
 extern uint8_t do_calibr;
+extern uint8_t calibration_abort;
 
 extern bool enable_click;
 
@@ -51,7 +52,6 @@ StructTextCol styleTextStruct;
 static lv_obj_t * lbl_instructions;
 
 static TaskHandle_t proximity_calibration_task = NULL;
-static SemaphoreHandle_t proximity_calibration_sem = NULL;
 
 static bool selStyle;
 
@@ -60,6 +60,7 @@ static bool selStyle;
 static void _proximity_calibration_fsm() {
     uint32_t start_countdown_time = 0;
     uint8_t changed = false;
+    calibration_abort = 0;
     while (indexPages == PROXY_CALIBRATION_PAGE  && proxi_calibration_data.state < PROXI_CALIBR_END) {
         ESP_LOGI("PROXY", "CALIBRATION TASK TICK");
         if (proxi_calibration_data.state == PROXI_CALIBR_COUNTDOWN) {
@@ -75,16 +76,14 @@ static void _proximity_calibration_fsm() {
                 changed = true;
             }
         } else if (proxi_calibration_data.state == PROXI_CALIBR_RUNNING) {
-            ESP_LOGI("PROXY", "Start calibration");
-            while (do_calibr == 1) {
-                vTaskDelay(pdMS_TO_TICKS(100));
+            if (do_calibr != 1) {
+                ESP_LOGI("PROXY", "Calibration END");
+                proxi_calibration_data.state = (do_calibr == 0) ? PROXI_CALIBR_END : PROXI_CALIBR_FAIL;
+                do_calibr = 0;
+                changed = true;
             }
-            ESP_LOGI("PROXY", "Calibration END");
-            proxi_calibration_data.state = (do_calibr == 0) ? PROXI_CALIBR_END : PROXI_CALIBR_FAIL;
-            do_calibr = 0;
-            changed = true;
         }
-        if (pdTRUE == xSemaphoreTake(proximity_calibration_sem, 0)) {
+        if (ulTaskNotifyTake(pdTRUE, 0)) {
             // Click received
             ESP_LOGI("PROXY", "CLICK RECEIVED");
             switch (proxi_calibration_data.state)
@@ -97,8 +96,9 @@ static void _proximity_calibration_fsm() {
                     break;
 
                 default:
+                    calibration_abort = 1;
                     proxi_calibration_data.countdown = 0;
-                    proxi_calibration_data.state = PROXI_CALIBR_END;
+                    proxi_calibration_data.state = PROXI_CALIBR_AIL;
                     changed = true;
                     break;
             }
@@ -120,8 +120,6 @@ static void _proximity_calibration_fsm() {
 static void _proximity_calibration_fsm_start() {
     if (proximity_calibration_task == NULL) {
         ESP_LOGI("PROXY", "CALIBRATION TASK START");
-        proximity_calibration_sem = xSemaphoreCreateMutex();
-        xSemaphoreTake(proximity_calibration_sem, 0);
         xTaskCreate(_proximity_calibration_fsm, "proximity-calibration-fsm", 8000, NULL, 1, &proximity_calibration_task);
     }
 }
@@ -148,10 +146,10 @@ static void _configurationpage_cb_event_config (uint8_t row, uint8_t dump, lv_ev
                     {
                         haptic_lclick(100);
                     }
-                    _proximity_calibration_fsm_start();
-                    if (uxSemaphoreGetCount(proximity_calibration_sem) == 0) {
-                        xSemaphoreGive(proximity_calibration_sem);
+                    if (proximity_calibration_task == NULL) {
+                         _proximity_calibration_fsm_start();
                     }
+                    xTaskNotifyGive(proximity_calibration_task);
                 }
             }
         break;
@@ -222,10 +220,10 @@ void proximity_calibration_draw(void) {
     
 
     //Creating calibration button
-    if (proxi_calibration_data.state < PROXI_CALIBR_RUNNING) {
+    if (proxi_calibration_data.state < PROXI_CALIBR_END) {
         strcpy(buttonMat[indexPages][3].text, (proxi_calibration_data.state == PROXI_CALIBR_START) ? "CALIBRATE" : "STOP");
         buttonMat[indexPages][3].btnHeight = BUTTON_APPEARANCE__BUTTON_HEIGHT__BTN_1H;
-        buttonMat[indexPages][3].action.timepressed = 2000;
+        buttonMat[indexPages][3].action.timepressed = 500;
 
         set_style_btn(&styleBg, &styleSize, &styleText, &selStyle, buttonMat[indexPages][3].color_border_shadow[0], buttonMat[indexPages][3].color_border_shadow[1], buttonMat[indexPages][3].color_bg_shadow[0], buttonMat[indexPages][3].color_bg_shadow[1], PageInfo.info_theme.theme_col_btn_pressed[PageInfo.info_theme.theme_selected][0],
                                     PageInfo.info_theme.theme_col_btn_pressed[PageInfo.info_theme.theme_selected][1], WIDTH_DEFAULT, PageInfo.info_theme.borders[PageInfo.info_theme.theme_selected].pad_top, PageInfo.info_theme.borders[PageInfo.info_theme.theme_selected].pad_left, buttonMat[indexPages][3].btnHeight, PageInfo.info_theme.separetor[PageInfo.info_theme.theme_selected].height, X_MARGIN, PageInfo.font_color[PageInfo.info_theme.theme_selected][0], PageInfo.font_color[PageInfo.info_theme.theme_selected][1], buttonMat[indexPages][3].icon);
