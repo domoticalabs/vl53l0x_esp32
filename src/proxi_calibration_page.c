@@ -39,7 +39,7 @@ extern uint8_t do_calibr;
 extern uint8_t calibration_abort;
 
 extern bool enable_click;
-extern uint8_t oldIndexPag = 255;
+extern uint8_t oldIndexPag;
 
 extern StructDeviceSettings dev_settings;
 extern StructVoltageEnable voltage_en;
