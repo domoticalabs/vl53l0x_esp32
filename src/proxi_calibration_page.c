@@ -39,6 +39,7 @@ extern uint8_t do_calibr;
 extern uint8_t calibration_abort;
 
 extern bool enable_click;
+extern uint8_t oldIndexPag = 255;
 
 extern StructDeviceSettings dev_settings;
 extern StructVoltageEnable voltage_en;
@@ -61,7 +62,7 @@ static void _proximity_calibration_fsm() {
     uint32_t start_countdown_time = 0;
     uint8_t changed = false;
     calibration_abort = 0;
-    while (indexPages == PROXY_CALIBRATION_PAGE  && proxi_calibration_data.state < PROXI_CALIBR_END) {
+    while (indexPages == PROXY_CALIBRATION_PAGE && proxi_calibration_data.state < PROXI_CALIBR_END) {
         ESP_LOGI("PROXY", "CALIBRATION TASK TICK");
         if (proxi_calibration_data.state == PROXI_CALIBR_COUNTDOWN) {
             if (xTaskGetTickCount() - start_countdown_time > pdMS_TO_TICKS(1000)) {
@@ -98,7 +99,7 @@ static void _proximity_calibration_fsm() {
                 default:
                     calibration_abort = 1;
                     proxi_calibration_data.countdown = 0;
-                    proxi_calibration_data.state = PROXI_CALIBR_AIL;
+                    proxi_calibration_data.state = PROXI_CALIBR_FAIL;
                     changed = true;
                     break;
             }
@@ -114,6 +115,14 @@ static void _proximity_calibration_fsm() {
     ESP_LOGI("PROXY", "CALIBRATION TASK END");
     proximity_calibration_task = NULL;
     proxi_calibration_data.state = PROXI_CALIBR_START;
+    if (indexPages == PROXY_CALIBRATION_PAGE) {
+        vTaskDelay(pdMS_TO_TICKS(2000));
+        if (indexPages == PROXY_CALIBRATION_PAGE) {
+            oldIndexPag = 255;
+            indexPages = 0;
+            recreate_page(false);
+        }
+    }
     vTaskDelete(NULL);
 }
 
