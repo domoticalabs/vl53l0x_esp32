@@ -16,6 +16,8 @@
 #include "struct.h"
 #include "vl53l0x_platform_log.h"
 
+static uint32_t sensibility = 1.2;
+
 #define VERSION_REQUIRED_MAJOR 1
 #define VERSION_REQUIRED_MINOR 0
 #define VERSION_REQUIRED_BUILD 2
@@ -297,6 +299,7 @@ VL53L0X_Error VL53L0X_Device_init(VL53L0X_Dev_t *device) {
     esp_err_t err = nvs_open("proxy", NVS_READWRITE, &nvs_handle);
     if (err == ESP_OK) {
         err = nvs_get_u32(nvs_handle, "calibr", &calibr);
+        err = nvs_get_u32(nvs_handle, "sens", &sensibility);
         nvs_close(nvs_handle);
     }
 
@@ -306,7 +309,7 @@ VL53L0X_Error VL53L0X_Device_init(VL53L0X_Dev_t *device) {
 VL53L0X_Error VL53L0X_Device_calibration(VL53L0X_Dev_t *device) {
     uint32_t xtalk;
     VL53L0X_Error error;
-    uint32_t best, best_distance = 0xFFFFFFFF, actual_best_distance, step = 0, start = 0, end = 0, improvement;
+    uint32_t best, best_distance = 0xFFFFFFFF, actual_best_distance, step = 0, start = 0, end = 0;
     uint8_t i = 0, found = 0, counter = 0, status = 0;
 
     ESP_LOGI("PROXY", "Device deinit %d", VL53L0X_Device_deinit(device));
@@ -328,6 +331,7 @@ VL53L0X_Error VL53L0X_Device_calibration(VL53L0X_Dev_t *device) {
                 }
                 ESP_LOGI("PROXY", "Actual: %u, Best: %u", actual_best_distance, best_distance);
                 if (actual_best_distance < best_distance) {
+                    sensibility = ((float) RangingMeasurementData.SignalRateRtnMegaCps)/((float) RangingMeasurementData.AmbientRateRtnMegaCps);
                     status = 1;
                     counter = 0;
                     best_distance = actual_best_distance;
@@ -358,6 +362,11 @@ VL53L0X_Error VL53L0X_Device_calibration(VL53L0X_Dev_t *device) {
         esp_err_t err = nvs_open("proxy", NVS_READWRITE, &nvs_handle);
         if (err == ESP_OK) {
             err = nvs_set_u32(nvs_handle, "calibr", best);
+            sensibility *= 0.6;
+            if (sensibility < 1.2) {
+                sensibility = 1.2;
+            }
+            err = nvs_set_u32(nvs_handle, "sens", sensibility);
             nvs_commit(nvs_handle);
             nvs_close(nvs_handle);
         }
@@ -406,10 +415,9 @@ inline bool filter(VL53L0X_RangingMeasurementData_t *RangingMeasurementData) {
     float sens;
     if (RangingMeasurementData->RangeStatus != 0)
         return false;
-    sens = ((float) RangingMeasurementData->SignalRateRtnMegaCps) / 65536.0;
-    sens *= (float) RangingMeasurementData->RangeMilliMeter;
-    ESP_LOGI("PROXY", "%d;%d;%.3f", RangingMeasurementData->RangeMilliMeter, RangingMeasurementData->SignalRateRtnMegaCps, sens);
-    if (RangingMeasurementData->SignalRateRtnMegaCps > 60000) {
+    sens = ((float)RangingMeasurementData->SignalRateRtnMegaCps) / ((float)RangingMeasurementData->AmbientRateRtnMegaCps);
+    ESP_LOGI("PROXY", "%d;%d;%d;%.3f", RangingMeasurementData->RangeMilliMeter, RangingMeasurementData->SignalRateRtnMegaCps, RangingMeasurementData->AmbientRateRtnMegaCps, sens);
+    if (sens > 1.2) {
         switch (dev_settings.proximity_config.sensitivity) {
             default:
             case PROXIMITY_CONFIGURATION__PROXIMITY_SENSITIVITY__PROXIMITY_OFF:
@@ -419,7 +427,7 @@ inline bool filter(VL53L0X_RangingMeasurementData_t *RangingMeasurementData) {
             case PROXIMITY_CONFIGURATION__PROXIMITY_SENSITIVITY__PROXIMITY_MED:
                 return RangingMeasurementData->RangeMilliMeter <= 500;
             case PROXIMITY_CONFIGURATION__PROXIMITY_SENSITIVITY__PROXIMITY_HIGH:
-                return RangingMeasurementData->RangeMilliMeter <= 600;
+                return (RangingMeasurementData->RangeMilliMeter <= 500 || sens > 2.0);
         }
     }
     return false;
