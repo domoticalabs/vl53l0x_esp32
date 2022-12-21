@@ -44,7 +44,6 @@ extern bool enable_click;
 extern uint8_t oldIndexPag;
 
 extern StructDeviceSettings dev_settings;
-extern StructVoltageEnable voltage_en;
 
 //Style variables for button
 lv_style_t styleTxt;
@@ -178,10 +177,6 @@ static void _configurationpage_cb_event_config (uint8_t row, uint8_t dump, lv_ev
                 if (row == 3 && !sent)
                 {
                     sent = true;
-                    if (dev_settings.physicall.hapticenable == true && voltage_en.haptic_desabled == false)
-                    {
-                        haptic_lclick(100);
-                    }
                     if (proximity_calibration_task == NULL) {
                          _proximity_calibration_fsm_start();
                     }
