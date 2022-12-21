@@ -293,7 +293,7 @@ VL53L0X_Error _VL53L0X_Device_init(VL53L0X_Dev_t *device, uint32_t *xtalk, uint8
 
 VL53L0X_Error VL53L0X_Device_init(VL53L0X_Dev_t *device) {
     uint32_t calibr = 25;
-    uint32_t temp = 280;
+    uint32_t temp = 300;
 
     // Read calibration from NVS
     nvs_handle_t nvs_handle;
