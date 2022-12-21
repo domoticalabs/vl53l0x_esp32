@@ -41,25 +41,23 @@ static bool selStyle;
 
 void _lbl_set_text() {
     char buf[127];
-    if (last_distance < -1) {
-        snprintf(buf, 127, "Waiting for proxy");
+    if (last_distance == -2) {
+        snprintf(buf, 127, "ERROR");
+    } else if (last_distance == -1) {
+        snprintf(buf, 127, "NO READING");
+    } else if (last_distance < 300) {
+        snprintf(buf, 127, "NEAR\nDist: %d", last_distance);
+    } else if (last_distance < 500) {
+        snprintf(buf, 127, "MEDIUM\nDist: %d", last_distance);
+    } else if (last_distance > 0) {
+        snprintf(buf, 127, "FAR\nDist: %d", last_distance);
     } else {
-        if (last_distance == -2) {
-            snprintf(buf, 127, "Proxy error");
-        } else if (last_distance == -1) {
-            snprintf(buf, 127, "NO READING");
-        } else if (last_distance < 300) {
-            snprintf(buf, 127, "NEAR\nDist: %d", last_distance);
-        } else if (last_distance < 500) {
-            snprintf(buf, 127, "MEDIUM\nDist: %d", last_distance);
-        } else {
-            snprintf(buf, 127, "FAR\nDist: %d", last_distance);
-        }
-        if (pdTRUE == xSemaphoreTake(xGuiSemaphore, pdMS_TO_TICKS(1000))) {
-            lv_label_set_text(lbl_distance, buf);
-            lv_obj_align(lbl_distance, NULL, LV_ALIGN_CENTER, 0, 0);
-            xSemaphoreGive(xGuiSemaphore);
-        }
+        snprintf(buf, 127, "NO PROXY");
+    }
+    if (pdTRUE == xSemaphoreTake(xGuiSemaphore, pdMS_TO_TICKS(1000))) {
+        lv_label_set_text(lbl_distance, buf);
+        lv_obj_align(lbl_distance, NULL, LV_ALIGN_CENTER, 0, 0);
+        xSemaphoreGive(xGuiSemaphore);
     }
 }
 
