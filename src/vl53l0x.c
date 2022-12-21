@@ -16,7 +16,7 @@
 #include "struct.h"
 #include "vl53l0x_platform_log.h"
 
-static float sensibility = 1.2;
+static float sensibility;
 
 #define VERSION_REQUIRED_MAJOR 1
 #define VERSION_REQUIRED_MINOR 0
@@ -292,8 +292,8 @@ VL53L0X_Error _VL53L0X_Device_init(VL53L0X_Dev_t *device, uint32_t *xtalk, uint8
 }
 
 VL53L0X_Error VL53L0X_Device_init(VL53L0X_Dev_t *device) {
-    uint32_t calibr = 380;
-    uint32_t temp;
+    uint32_t calibr = 25;
+    uint32_t temp = 280;
 
     // Read calibration from NVS
     nvs_handle_t nvs_handle;
@@ -459,17 +459,7 @@ inline bool filter(VL53L0X_RangingMeasurementData_t *RangingMeasurementData) {
     sens = ((float)RangingMeasurementData->SignalRateRtnMegaCps) / ((float)RangingMeasurementData->AmbientRateRtnMegaCps);
     ESP_LOGI("PROXY", "%d;%d;%d;%.3f", RangingMeasurementData->RangeMilliMeter, RangingMeasurementData->SignalRateRtnMegaCps, RangingMeasurementData->AmbientRateRtnMegaCps, sens);
     if (sens > sensibility) {
-        switch (dev_settings.proximity_config.sensitivity) {
-            default:
-            case PROXIMITY_CONFIGURATION__PROXIMITY_SENSITIVITY__PROXIMITY_OFF:
-                return false;
-            case PROXIMITY_CONFIGURATION__PROXIMITY_SENSITIVITY__PROXIMITY_LOW:
-                return RangingMeasurementData->RangeMilliMeter <= 350;
-            case PROXIMITY_CONFIGURATION__PROXIMITY_SENSITIVITY__PROXIMITY_MED:
-                return RangingMeasurementData->RangeMilliMeter <= 500;
-            case PROXIMITY_CONFIGURATION__PROXIMITY_SENSITIVITY__PROXIMITY_HIGH:
-                return (RangingMeasurementData->RangeMilliMeter <= 500 || sens > 2.0);
-        }
+        return (RangingMeasurementData->RangeMilliMeter <= 500 || sens > 2.0);
     }
     return false;
 }
@@ -486,6 +476,7 @@ VL53L0X_Error VL53L0X_Device_getMeasurement(VL53L0X_Dev_t *device, uint16_t* dat
 
     VL53L0X_RangingMeasurementData_t RangingMeasurementData;
     Status = VL53L0X_GetRangingMeasurementData(device, &RangingMeasurementData);
+    ESP_LOGI("PROXY", "Get measure %d", Status);
     if (Status != VL53L0X_ERROR_NONE)
     {
         VL53L0X_ErrLog("VL53L0X_GetRangingMeasurementData error (%d)", Status);
