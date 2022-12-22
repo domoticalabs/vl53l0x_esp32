@@ -69,7 +69,7 @@ static void _smooth_restart() {
         lv_scr_load_anim(bg, LV_SCR_LOAD_ANIM_NONE, 0, 0, true);
         xSemaphoreGive(xGuiSemaphore);
     }
-    vTaskDelay(pdMS_TO_TICKS(50));
+    vTaskDelay(pdMS_TO_TICKS(200));
     esp_restart();
 }
 
