@@ -1,18 +1,18 @@
 #define LV_LVGL_H_INCLUDE_SIMPLE
 
 #include "proxi_calibration_page.h"
+
+#include "Proto.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
 #include "freertos/semphr.h"
-#include "lvgl_utils.h"
-#include "struct.h"
-#include "lvgl.h"
-#include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "haptic_lib.h"
+#include "lvgl.h"
+#include "lvgl_utils.h"
+#include "nvs_flash.h"
 #include "pages.h"
-#include "Proto.h"
+#include "struct.h"
 
 typedef enum {
     PROXI_CALIBR_START,
@@ -195,6 +195,11 @@ static void _configurationpage_cb_event_config (uint8_t row, uint8_t dump, lv_ev
 }
 
 void proximity_calibration_draw(void) {
+    uint32_t temp;
+    float sens = 0;
+    uint32_t calibr = 0;
+    nvs_handle_t nvs_handle;
+    esp_err_t err;
     buttonMat[indexPages][3].behavior.behavior = BUTTON_BEHAVIOR__BUTTON_BEHAVIOR_TYPE__STATIC_BTN_BG;
     buttonMat[indexPages][3].icon = -1;
     buttonMat[indexPages][3].colors[0] = LV_COLOR_WHITE;
@@ -235,11 +240,7 @@ void proximity_calibration_draw(void) {
 
         case PROXI_CALIBR_END:
             // Read calibration from NVS
-            uint32_t temp;
-            float sens;
-            uint32_t calibr;
-            nvs_handle_t nvs_handle;
-            esp_err_t err = nvs_open("proxy", NVS_READWRITE, &nvs_handle);
+            err = nvs_open("proxy", NVS_READWRITE, &nvs_handle);
             if (err == ESP_OK) {
                 err = nvs_get_u32(nvs_handle, "calibr", &calibr);
                 err = nvs_get_u32(nvs_handle, "sens", &temp);
