@@ -58,7 +58,20 @@ static TaskHandle_t proximity_calibration_task = NULL;
 
 static bool selStyle;
 
+static uint32_t btn_clicked;
+
 #define TAG "PROXICALIBPAGE"
+
+static void _smooth_restart() {
+    lv_obj_t *bg;
+    if (pdTRUE == xSemaphoreTake(xGuiSemaphore, pdMS_TO_TICKS(200))) {
+        screen = Startup_page(&bg);
+        lv_scr_load_anim(bg, LV_SCR_LOAD_ANIM_NONE, 0, 0, true);
+        xSemaphoreGive(xGuiSemaphore);
+    }
+    vTaskDelay(pdMS_TO_TICKS(50));
+    esp_restart();
+}
 
 static void _proximity_calibration_fsm() {
     uint32_t start_countdown_time = 0;
@@ -117,21 +130,25 @@ static void _proximity_calibration_fsm() {
         if (ulTaskNotifyTake(pdTRUE, 0)) {
             // Click received
             ESP_LOGI("PROXY", "CLICK RECEIVED");
-            switch (proxi_calibration_data.state)
-            {
-                case PROXI_CALIBR_START:
-                    proxi_calibration_data.countdown = 5;
-                    start_countdown_time = xTaskGetTickCount();
-                    proxi_calibration_data.state = PROXI_CALIBR_COUNTDOWN;
-                    changed = true;
-                    break;
+            if (btn_clicked == 0) {
+                switch (proxi_calibration_data.state)
+                {
+                    case PROXI_CALIBR_START:
+                        proxi_calibration_data.countdown = 5;
+                        start_countdown_time = xTaskGetTickCount();
+                        proxi_calibration_data.state = PROXI_CALIBR_COUNTDOWN;
+                        changed = true;
+                        break;
 
-                default:
-                    calibration_abort = 1;
-                    proxi_calibration_data.countdown = 0;
-                    proxi_calibration_data.state = PROXI_CALIBR_FAIL;
-                    changed = true;
-                    break;
+                    default:
+                        calibration_abort = 1;
+                        proxi_calibration_data.countdown = 0;
+                        proxi_calibration_data.state = PROXI_CALIBR_FAIL;
+                        changed = true;
+                        break;
+                }
+            } else {
+                _smooth_restart();
             }
         }
         if (changed) {
@@ -147,8 +164,8 @@ static void _proximity_calibration_fsm() {
     if (indexPages == PROXY_CALIBRATION_PAGE) {
         vTaskDelay(pdMS_TO_TICKS(2000));
     }
-    if (proxi_calibration_data.state == PROXI_CALIBR_END) {
-        esp_restart();
+    if (proxi_calibration_data.state >= PROXI_CALIBR_END) {
+        _smooth_restart();
     }
     vTaskDelete(NULL);
 }
@@ -161,48 +178,31 @@ static void _proximity_calibration_fsm_start() {
 }
 
 static void _configurationpage_cb_event_config (uint8_t row, uint8_t dump, lv_event_t event, uint32_t time_pressed) {
-    static bool sent = false;
     switch (event)
     {
         case LV_EVENT_PRESSED:
         break;
 
         case LV_EVENT_LONG_PRESSED_REPEAT:
-            //Skipping first click after standby
-            if (!enable_click)
-            {
-                break;
-            }
-            if (time_pressed >= pdMS_TO_TICKS(buttonMat[indexPages][row].action.timepressed))
-            {
-                if (row == 3 && !sent)
-                {
-                    sent = true;
-                    if (dev_settings.physicall.hapticenable == true && voltage_en.haptic_desabled == false)
-                    {
-                        haptic_lclick(100);
-                    }
-                    if (proximity_calibration_task == NULL) {
-                         _proximity_calibration_fsm_start();
-                    }
-                    xTaskNotifyGive(proximity_calibration_task);
-                }
-            }
         break;
 
         case LV_EVENT_PRESS_LOST:
         break;
 
         case LV_EVENT_RELEASED:
-            //Re enabling click after standby
-            if (!enable_click)
-            {
-                enable_click = true;
-                break;
+            if (proximity_calibration_task == NULL) {
+                    _proximity_calibration_fsm_start();
             }
-            if (sent)
-            {
-                sent = false;
+            if (row == 3) {
+                if (dev_settings.physicall.hapticenable == true && voltage_en.haptic_desabled == false) {
+                    haptic_lclick(100);
+                }
+                btn_clicked = 0;
+                xTaskNotifyGive(proximity_calibration_task);
+            } else if (row == 2) {
+                // Abort
+                btn_clicked = 1;
+                xTaskNotifyGive(proximity_calibration_task);
             }
         break;
     }
@@ -248,11 +248,11 @@ void proximity_calibration_draw(void) {
             break;
 
         case PROXI_CALIBR_END:
-            snprintf(buf, 127, "Calibration\ncompleted\n\nYou can now\nexit this page");
+            snprintf(buf, 127, "Calibration\ncompleted\n\\nWait for\nreboot");
             break;
 
         default:
-            snprintf(buf, 127, "Calibration failed\n\nPlase enter\nagain in\nthis page");
+            snprintf(buf, 127, "Calibration failed\n\nWait for\nreboot");
             break;
     }
     lv_label_set_text(lbl_instructions, buf);
@@ -268,12 +268,14 @@ void proximity_calibration_draw(void) {
         strcpy(buttonMat[indexPages][3].text, (proxi_calibration_data.state == PROXI_CALIBR_START) ? "CALIBRATE" : "STOP");
         buttonMat[indexPages][3].btnHeight = BUTTON_APPEARANCE__BUTTON_HEIGHT__BTN_1H;
         buttonMat[indexPages][3].action.timepressed = 500;
+        buttonMat[indexPages][3].icon = -1;
 
         set_style_btn(&styleBg, &styleSize, &styleText, &selStyle, buttonMat[indexPages][3].color_border_shadow[0], buttonMat[indexPages][3].color_border_shadow[1], buttonMat[indexPages][3].color_bg_shadow[0], buttonMat[indexPages][3].color_bg_shadow[1], PageInfo.info_theme.theme_col_btn_pressed[PageInfo.info_theme.theme_selected][0],
                                     PageInfo.info_theme.theme_col_btn_pressed[PageInfo.info_theme.theme_selected][1], WIDTH_DEFAULT, PageInfo.info_theme.borders[PageInfo.info_theme.theme_selected].pad_top, PageInfo.info_theme.borders[PageInfo.info_theme.theme_selected].pad_left, buttonMat[indexPages][3].btnHeight, PageInfo.info_theme.separetor[PageInfo.info_theme.theme_selected].height, X_MARGIN, PageInfo.font_color[PageInfo.info_theme.theme_selected][0], PageInfo.font_color[PageInfo.info_theme.theme_selected][1], buttonMat[indexPages][3].icon);
 
         StructBorders *border_cnfg_config_page = malloc(sizeof(StructBorders));
         memcpy(border_cnfg_config_page, &PageInfo.info_theme.borders[PageInfo.info_theme.theme_selected], sizeof(PageInfo.info_theme.borders[PageInfo.info_theme.theme_selected]));
+        border_cnfg_config_page->top = 1;
         border_cnfg_config_page->theme_button_col_border[0] = buttonMat[indexPages][3].color_border_shadow[0];
         border_cnfg_config_page->theme_button_col_border[1] = buttonMat[indexPages][3].color_border_shadow[1];
         
@@ -281,5 +283,27 @@ void proximity_calibration_draw(void) {
         buttonMat[indexPages][3].colIdx = 1;
         buttonMat[indexPages][3].pointToObject = create_btn(styleSize, screen, &(styleText.font_style), buttonMat[indexPages][3].text, (4*10) + 1, styleBg, styleText, &_configurationpage_cb_event_config, *border_cnfg_config_page, true, true, false);
         free (border_cnfg_config_page);
+    }
+
+    // Creating abort button
+    if (proxi_calibration_data.state == PROXI_CALIBR_START) {
+        strcpy(buttonMat[indexPages][2].text, "ABORT");
+        buttonMat[indexPages][2].btnHeight = BUTTON_APPEARANCE__BUTTON_HEIGHT__BTN_1H;
+        buttonMat[indexPages][2].action.timepressed = 500;
+        buttonMat[indexPages][2].icon = -1;
+
+        set_style_btn(&styleBg, &styleSize, &styleText, &selStyle, buttonMat[indexPages][2].color_border_shadow[0], buttonMat[indexPages][2].color_border_shadow[1], buttonMat[indexPages][2].color_bg_shadow[0], buttonMat[indexPages][2].color_bg_shadow[1], PageInfo.info_theme.theme_col_btn_pressed[PageInfo.info_theme.theme_selected][0],
+                      PageInfo.info_theme.theme_col_btn_pressed[PageInfo.info_theme.theme_selected][1], WIDTH_DEFAULT, PageInfo.info_theme.borders[PageInfo.info_theme.theme_selected].pad_top, PageInfo.info_theme.borders[PageInfo.info_theme.theme_selected].pad_left, buttonMat[indexPages][2].btnHeight, PageInfo.info_theme.separetor[PageInfo.info_theme.theme_selected].height, X_MARGIN, PageInfo.font_color[PageInfo.info_theme.theme_selected][0], PageInfo.font_color[PageInfo.info_theme.theme_selected][1], buttonMat[indexPages][2].icon);
+
+        StructBorders *border_cnfg_config_page = malloc(sizeof(StructBorders));
+        memcpy(border_cnfg_config_page, &PageInfo.info_theme.borders[PageInfo.info_theme.theme_selected], sizeof(PageInfo.info_theme.borders[PageInfo.info_theme.theme_selected]));
+        border_cnfg_config_page->top = 1;
+        border_cnfg_config_page->theme_button_col_border[0] = buttonMat[indexPages][2].color_border_shadow[0];
+        border_cnfg_config_page->theme_button_col_border[1] = buttonMat[indexPages][2].color_border_shadow[1];
+
+        buttonMat[indexPages][2].rowIdx = 2;
+        buttonMat[indexPages][2].colIdx = 1;
+        buttonMat[indexPages][2].pointToObject = create_btn(styleSize, screen, &(styleText.font_style), buttonMat[indexPages][2].text, (3 * 10) + 1, styleBg, styleText, &_configurationpage_cb_event_config, *border_cnfg_config_page, true, true, false);
+        free(border_cnfg_config_page);
     }
 }
