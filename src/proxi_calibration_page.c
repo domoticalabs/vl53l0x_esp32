@@ -248,7 +248,7 @@ void proximity_calibration_draw(void) {
             break;
 
         case PROXI_CALIBR_END:
-            snprintf(buf, 127, "Calibration\ncompleted\n\\nWait for\nreboot");
+            snprintf(buf, 127, "Calibration\ncompleted\n\nWait for\nreboot");
             break;
 
         default:
