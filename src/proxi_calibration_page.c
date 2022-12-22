@@ -234,7 +234,20 @@ void proximity_calibration_draw(void) {
             break;
 
         case PROXI_CALIBR_END:
-            snprintf(buf, 127, "Calibration\ncompleted\n\nWait for\nreboot");
+            // Read calibration from NVS
+            uint32_t temp;
+            float sens;
+            uint32_t calibr;
+            nvs_handle_t nvs_handle;
+            esp_err_t err = nvs_open("proxy", NVS_READWRITE, &nvs_handle);
+            if (err == ESP_OK) {
+                err = nvs_get_u32(nvs_handle, "calibr", &calibr);
+                err = nvs_get_u32(nvs_handle, "sens", &temp);
+                sens = ((float)temp) / 100.0;
+                nvs_close(nvs_handle);
+            }
+
+            snprintf(buf, 127, "Calibration\ncompleted\n\nXTALK: %d\nSENS: %.3f\n\nWait for\nreboot", calibr, sens);
             break;
 
         default:
