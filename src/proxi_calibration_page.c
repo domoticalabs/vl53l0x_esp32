@@ -228,7 +228,7 @@ void proximity_calibration_draw(void) {
     switch (proxi_calibration_data.state)
     {
         case PROXI_CALIBR_START:
-            snprintf(buf, 127, "Please press\nthe calibration\nbutton below");
+            snprintf(buf, 127, "New cover\ndetected\nMay need\ncalibration");
             break;
 
         case PROXI_CALIBR_COUNTDOWN:
@@ -287,7 +287,7 @@ void proximity_calibration_draw(void) {
 
     // Creating abort button
     if (proxi_calibration_data.state == PROXI_CALIBR_START) {
-        strcpy(buttonMat[indexPages][2].text, "ABORT");
+        strcpy(buttonMat[indexPages][2].text, "CANCEL");
         buttonMat[indexPages][2].btnHeight = BUTTON_APPEARANCE__BUTTON_HEIGHT__BTN_1H;
         buttonMat[indexPages][2].action.timepressed = 500;
         buttonMat[indexPages][2].icon = -1;
