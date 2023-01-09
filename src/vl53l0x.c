@@ -16,7 +16,7 @@
 #include "struct.h"
 #include "vl53l0x_platform_log.h"
 
-static float sensibility = 1.2;
+static float sensibility = 13.0;
 
 #define VERSION_REQUIRED_MAJOR 1
 #define VERSION_REQUIRED_MINOR 0
@@ -291,19 +291,27 @@ VL53L0X_Error _VL53L0X_Device_init(VL53L0X_Dev_t *device, uint32_t *xtalk, uint8
     return Status;
 }
 
+#define CALIBR_DEF 150
+#define SENS_DEF 1300
 VL53L0X_Error VL53L0X_Device_init(VL53L0X_Dev_t *device) {
-    uint32_t calibr = 380;
-    uint32_t temp;
+    uint32_t calibr = CALIBR_DEF;
+    uint32_t temp = SENS_DEF;
 
     // Read calibration from NVS
     nvs_handle_t nvs_handle;
     esp_err_t err = nvs_open("proxy", NVS_READWRITE, &nvs_handle);
     if (err == ESP_OK) {
         err = nvs_get_u32(nvs_handle, "calibr", &calibr);
+        if (err != ESP_OK) {
+            calibr = CALIBR_DEF;
+        }
         err = nvs_get_u32(nvs_handle, "sens", &temp);
-        sensibility = ((float) temp) / 100.0;
+        if (err != ESP_OK) {
+            temp = SENS_DEF;
+        }
         nvs_close(nvs_handle);
     }
+    sensibility = ((float) temp) / 100.0;
 
     return _VL53L0X_Device_init(device, &calibr, 0);
 }
@@ -449,9 +457,6 @@ VL53L0X_Error VL53L0X_Device_deinit(VL53L0X_Dev_t *device)
     return Status;
 }
 
-#define SENS_HIGH   17500000    // 100cm
-#define SENS_MED    43500000    // 80cm
-#define SENS_LOW    116000000   // 50cm
 inline bool filter(VL53L0X_RangingMeasurementData_t *RangingMeasurementData) {
     float sens;
     if (RangingMeasurementData->RangeStatus != 0)
@@ -464,11 +469,11 @@ inline bool filter(VL53L0X_RangingMeasurementData_t *RangingMeasurementData) {
             case PROXIMITY_CONFIGURATION__PROXIMITY_SENSITIVITY__PROXIMITY_OFF:
                 return false;
             case PROXIMITY_CONFIGURATION__PROXIMITY_SENSITIVITY__PROXIMITY_LOW:
-                return RangingMeasurementData->RangeMilliMeter <= 350;
+                return RangingMeasurementData->RangeMilliMeter <= 200;
             case PROXIMITY_CONFIGURATION__PROXIMITY_SENSITIVITY__PROXIMITY_MED:
-                return RangingMeasurementData->RangeMilliMeter <= 500;
+                return RangingMeasurementData->RangeMilliMeter <= 400;
             case PROXIMITY_CONFIGURATION__PROXIMITY_SENSITIVITY__PROXIMITY_HIGH:
-                return (RangingMeasurementData->RangeMilliMeter <= 500 || sens > 2.0);
+                return RangingMeasurementData->RangeMilliMeter <= 600;
         }
     }
     return false;

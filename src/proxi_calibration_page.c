@@ -62,6 +62,9 @@ static uint32_t btn_clicked;
 
 #define TAG "PROXICALIBPAGE"
 
+#define PROXI_CALIBR_COUNTDOWN_EMPTY_TIME 8
+#define PROXI_CALIBR_COUNTDOWN_TIME 5
+
 static void _smooth_restart() {
     lv_obj_t *bg;
     if (pdTRUE == xSemaphoreTake(xGuiSemaphore, pdMS_TO_TICKS(200))) {
@@ -107,7 +110,7 @@ static void _proximity_calibration_fsm() {
             if (do_calibr == 0) {
                 ESP_LOGI("PROXY", "Calibration END");
                 proxi_calibration_data.state = PROXI_CALIBR_COUNTDOWN_EMPTY;
-                proxi_calibration_data.countdown = 5;
+                proxi_calibration_data.countdown = PROXI_CALIBR_COUNTDOWN_EMPTY_TIME;
                 changed = true;
             } else if (do_calibr != 1) {
                 ESP_LOGI("PROXY", "Calibration END");
@@ -134,7 +137,7 @@ static void _proximity_calibration_fsm() {
                 switch (proxi_calibration_data.state)
                 {
                     case PROXI_CALIBR_START:
-                        proxi_calibration_data.countdown = 5;
+                        proxi_calibration_data.countdown = PROXI_CALIBR_COUNTDOWN_TIME;
                         start_countdown_time = xTaskGetTickCount();
                         proxi_calibration_data.state = PROXI_CALIBR_COUNTDOWN;
                         changed = true;
