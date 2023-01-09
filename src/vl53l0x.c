@@ -291,19 +291,27 @@ VL53L0X_Error _VL53L0X_Device_init(VL53L0X_Dev_t *device, uint32_t *xtalk, uint8
     return Status;
 }
 
+#define CALIBR_DEF 150
+#define SENS_DEF 1300
 VL53L0X_Error VL53L0X_Device_init(VL53L0X_Dev_t *device) {
-    uint32_t calibr = 25;
-    uint32_t temp = 300;
+    uint32_t calibr = CALIBR_DEF;
+    uint32_t temp = SENS_DEF;
 
     // Read calibration from NVS
     nvs_handle_t nvs_handle;
     esp_err_t err = nvs_open("proxy", NVS_READWRITE, &nvs_handle);
     if (err == ESP_OK) {
         err = nvs_get_u32(nvs_handle, "calibr", &calibr);
+        if (err != ESP_OK) {
+            calibr = CALIBR_DEF;
+        }
         err = nvs_get_u32(nvs_handle, "sens", &temp);
-        sensibility = ((float) temp) / 100.0;
+        if (err != ESP_OK) {
+            temp = SENS_DEF;
+        }
         nvs_close(nvs_handle);
     }
+    sensibility = ((float) temp) / 100.0;
 
     return _VL53L0X_Device_init(device, &calibr, 0);
 }
@@ -458,8 +466,8 @@ inline bool filter(VL53L0X_RangingMeasurementData_t *RangingMeasurementData) {
         return false;
     sens = ((float)RangingMeasurementData->SignalRateRtnMegaCps) / ((float)RangingMeasurementData->AmbientRateRtnMegaCps);
     ESP_LOGI("PROXY", "%d;%d;%d;%.3f", RangingMeasurementData->RangeMilliMeter, RangingMeasurementData->SignalRateRtnMegaCps, RangingMeasurementData->AmbientRateRtnMegaCps, sens);
-    if (sens > sensibility) {
-        return (RangingMeasurementData->RangeMilliMeter <= 500 || sens > 2.0);
+    if (sens > sensibility && RangingMeasurementData->RangeMilliMeter < 600) {
+        return true;
     }
     return false;
 }
