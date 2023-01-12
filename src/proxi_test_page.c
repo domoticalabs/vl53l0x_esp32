@@ -41,6 +41,7 @@ static bool selStyle;
 
 void _lbl_set_text() {
     char buf[127];
+    printf ("Distance is %d\n",last_distance);
     if (last_distance == -2) {
         snprintf(buf, 127, "ERROR");
     } else if (last_distance == -1) {

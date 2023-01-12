@@ -292,7 +292,7 @@ VL53L0X_Error _VL53L0X_Device_init(VL53L0X_Dev_t *device, uint32_t *xtalk, uint8
 }
 
 #define CALIBR_DEF 50
-#define SENS_DEF 5000
+#define SENS_DEF 500
 VL53L0X_Error VL53L0X_Device_init(VL53L0X_Dev_t *device) {
     uint32_t calibr = CALIBR_DEF;
     uint32_t temp = SENS_DEF;
