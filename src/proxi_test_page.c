@@ -47,9 +47,9 @@ void _lbl_set_text() {
         snprintf(buf, 127, "NO READING");
     } else if (last_distance < 200) {
         snprintf(buf, 127, "NEAR\nDist: %d", last_distance);
-    } else if (last_distance < 400) {
+    } else if (last_distance < 500) {
         snprintf(buf, 127, "MEDIUM\nDist: %d", last_distance);
-    } else if (last_distance < 600) {
+    } else if (last_distance < 800) {
         snprintf(buf, 127, "FAR\nDist: %d", last_distance);
     } else {
         snprintf(buf, 127, "NO PROXY");

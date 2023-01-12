@@ -291,8 +291,8 @@ VL53L0X_Error _VL53L0X_Device_init(VL53L0X_Dev_t *device, uint32_t *xtalk, uint8
     return Status;
 }
 
-#define CALIBR_DEF 150
-#define SENS_DEF 1300
+#define CALIBR_DEF 50
+#define SENS_DEF 5000
 VL53L0X_Error VL53L0X_Device_init(VL53L0X_Dev_t *device) {
     uint32_t calibr = CALIBR_DEF;
     uint32_t temp = SENS_DEF;
@@ -466,7 +466,7 @@ inline bool filter(VL53L0X_RangingMeasurementData_t *RangingMeasurementData) {
         return false;
     sens = ((float)RangingMeasurementData->SignalRateRtnMegaCps) / ((float)RangingMeasurementData->AmbientRateRtnMegaCps);
     ESP_LOGI("PROXY", "%d;%d;%d;%.3f", RangingMeasurementData->RangeMilliMeter, RangingMeasurementData->SignalRateRtnMegaCps, RangingMeasurementData->AmbientRateRtnMegaCps, sens);
-    if (sens > sensibility && RangingMeasurementData->RangeMilliMeter < 600) {
+    if (sens > sensibility && RangingMeasurementData->RangeMilliMeter < 800) {
         return true;
     }
     return false;
