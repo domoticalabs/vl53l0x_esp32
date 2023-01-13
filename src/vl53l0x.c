@@ -291,8 +291,8 @@ VL53L0X_Error _VL53L0X_Device_init(VL53L0X_Dev_t *device, uint32_t *xtalk, uint8
     return Status;
 }
 
-#define CALIBR_DEF 150
-#define SENS_DEF 1300
+#define CALIBR_DEF 50
+#define SENS_DEF 500
 VL53L0X_Error VL53L0X_Device_init(VL53L0X_Dev_t *device) {
     uint32_t calibr = CALIBR_DEF;
     uint32_t temp = SENS_DEF;
@@ -471,9 +471,9 @@ inline bool filter(VL53L0X_RangingMeasurementData_t *RangingMeasurementData) {
             case PROXIMITY_CONFIGURATION__PROXIMITY_SENSITIVITY__PROXIMITY_LOW:
                 return RangingMeasurementData->RangeMilliMeter <= 200;
             case PROXIMITY_CONFIGURATION__PROXIMITY_SENSITIVITY__PROXIMITY_MED:
-                return RangingMeasurementData->RangeMilliMeter <= 400;
+                return RangingMeasurementData->RangeMilliMeter <= 500;
             case PROXIMITY_CONFIGURATION__PROXIMITY_SENSITIVITY__PROXIMITY_HIGH:
-                return RangingMeasurementData->RangeMilliMeter <= 600;
+                return RangingMeasurementData->RangeMilliMeter <= 800;
         }
     }
     return false;
