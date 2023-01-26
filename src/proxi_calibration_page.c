@@ -13,6 +13,7 @@
 #include "haptic_lib.h"
 #include "pages.h"
 #include "Proto.h"
+#include <nvs_flash.h>
 
 typedef enum {
     PROXI_CALIBR_START,
@@ -151,6 +152,23 @@ static void _proximity_calibration_fsm() {
                         break;
                 }
             } else {
+                nvs_handle_t nvs_handle;
+                esp_err_t err = nvs_open("proxy", NVS_READWRITE, &nvs_handle);
+                if (err == ESP_OK)
+                {
+                    err = nvs_erase_all(nvs_handle);
+                    if (err != ESP_OK)
+                    {
+                        
+                    }
+                    else
+                    {
+                        //commit changes
+                        err = nvs_commit(nvs_handle);
+                    }
+                    nvs_close(nvs_handle);
+                    vTaskDelay(pdMS_TO_TICKS(500));
+                }   
                 _smooth_restart();
             }
         }
