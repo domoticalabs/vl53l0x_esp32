@@ -308,7 +308,7 @@ void proximity_calibration_draw(void) {
 
     // Creating abort button
     if (proxi_calibration_data.state == PROXI_CALIBR_START) {
-        strcpy(buttonMat[indexPages][2].text, "CANCEL");
+        strcpy(buttonMat[indexPages][2].text, "FACTORY\nSETTINGS");
         buttonMat[indexPages][2].btnHeight = BUTTON_APPEARANCE__BUTTON_HEIGHT__BTN_1H;
         buttonMat[indexPages][2].action.timepressed = 500;
         buttonMat[indexPages][2].icon = -1;
