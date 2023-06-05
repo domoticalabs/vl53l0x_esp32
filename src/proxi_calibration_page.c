@@ -8,8 +8,6 @@
 #include "lvgl_utils.h"
 #include "struct.h"
 #include "lvgl.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
 #include "haptic_lib.h"
 #include "pages.h"
 #include "Proto.h"
