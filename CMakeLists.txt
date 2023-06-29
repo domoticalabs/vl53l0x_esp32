@@ -7,7 +7,6 @@ set(sources
     "platform/esp32/src/vl53l0x_platform_log.c"
     "platform/esp32/src/vl53l0x_platform.c"
     "src/vl53l0x.c"
-    "src/proxi_calibration_page.c"
 )
 
 set(includes
