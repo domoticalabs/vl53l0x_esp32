@@ -300,7 +300,7 @@ void proximity_calibration_draw(void) {
         
         buttonMat[indexPages][3].rowIdx = 3;
         buttonMat[indexPages][3].colIdx = 1;
-        buttonMat[indexPages][3].pointToObject = create_btn(styleSize, screen, &(styleText.font_style), buttonMat[indexPages][3].text, (4*10) + 1, styleBg, styleText, &_configurationpage_cb_event_config, *border_cnfg_config_page, true, true, false);
+        buttonMat[indexPages][3].pointToObject = create_btn(styleSize, screen, &(styleText.font_style), buttonMat[indexPages][3].text, (4*10) + 1, styleBg, styleText, &_configurationpage_cb_event_config, *border_cnfg_config_page, true, true, false, (buttonMat[indexPages][3].action.type & BUTTON_ACTION__BUTTON_TYPE__DYNAMIC_VALUE_BTN));
         free (border_cnfg_config_page);
     }
 
@@ -322,7 +322,7 @@ void proximity_calibration_draw(void) {
 
         buttonMat[indexPages][2].rowIdx = 2;
         buttonMat[indexPages][2].colIdx = 1;
-        buttonMat[indexPages][2].pointToObject = create_btn(styleSize, screen, &(styleText.font_style), buttonMat[indexPages][2].text, (3 * 10) + 1, styleBg, styleText, &_configurationpage_cb_event_config, *border_cnfg_config_page, true, true, false);
+        buttonMat[indexPages][2].pointToObject = create_btn(styleSize, screen, &(styleText.font_style), buttonMat[indexPages][2].text, (3 * 10) + 1, styleBg, styleText, &_configurationpage_cb_event_config, *border_cnfg_config_page, true, true, false, (buttonMat[indexPages][2].action.type & BUTTON_ACTION__BUTTON_TYPE__DYNAMIC_VALUE_BTN));
         free(border_cnfg_config_page);
     }
 }
